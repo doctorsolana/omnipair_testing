@@ -1,0 +1,39 @@
+{
+  "name": "omnipair_testing",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@9.6.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "idl:fetch": "anchor idl fetch --provider.cluster mainnet -o idl/omnipair.json omnixgS8fnqHfCcTGKWj6JtKjzpJZ1Y5y9pyFkQDkYE",
+    "codama:gen": "codama run --all"
+  },
+  "dependencies": {
+    "@solana/connector": "^0.2.4",
+    "@solana/kit": "^3.0.3",
+    "bs58": "^6.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@codama/nodes-from-anchor": "^1.3.8",
+    "@codama/renderers-js": "^1.7.0",
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "codama": "^1.5.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.2.4"
+  }
+}

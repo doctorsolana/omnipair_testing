@@ -1,0 +1,17 @@
+{
+  "idl": "idl/omnipair.json",
+  "scripts": {
+    "js": {
+      "from": "@codama/renderers-js",
+      "args": [
+        "src/generated/omnipair",
+        {
+          "dependencyVersions": {
+            "@solana/kit": "^3.0.3"
+          },
+          "useGranularImports": false
+        }
+      ]
+    }
+  }
+}
