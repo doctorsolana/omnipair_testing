@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import { AppProvider } from '@solana/connector/react'
 import { getDefaultConfig } from '@solana/connector/headless'
 import './index.css'
@@ -20,7 +21,9 @@ const connectorConfig = getDefaultConfig({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppProvider connectorConfig={connectorConfig}>
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </AppProvider>
   </StrictMode>,
 )
