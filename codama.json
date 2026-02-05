@@ -4,7 +4,7 @@
     "js": {
       "from": "@codama/renderers-js",
       "args": [
-        "src/generated/omnipair",
+        "src/omnipair/generated",
         {
           "dependencyVersions": {
             "@solana/kit": "^3.0.3"

@@ -4,17 +4,16 @@ import { AppProvider } from '@solana/connector/react'
 import { getDefaultConfig } from '@solana/connector/headless'
 import './index.css'
 import App from './App.tsx'
+import { getRpcUrl } from './solana/rpcConfig'
 
-const RPC_URL =
-  (import.meta as { env?: { VITE_SOLANA_RPC_URL?: string } })?.env?.VITE_SOLANA_RPC_URL ||
-  'https://api.devnet.solana.com'
+const RPC_URL = getRpcUrl()
 
 const connectorConfig = getDefaultConfig({
   appName: 'Omnipair Testing UI',
   autoConnect: true,
   clusters: [
-    { id: 'solana:devnet' as const, label: 'Devnet', url: RPC_URL },
-    { id: 'solana:mainnet' as const, label: 'Mainnet', url: 'https://api.mainnet-beta.solana.com' },
+    { id: 'solana:mainnet' as const, label: 'Mainnet', url: RPC_URL },
+    { id: 'solana:devnet' as const, label: 'Devnet', url: 'https://api.devnet.solana.com' },
   ],
 })
 

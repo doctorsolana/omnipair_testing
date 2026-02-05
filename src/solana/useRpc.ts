@@ -1,9 +1,8 @@
 import { useMemo } from 'react'
 import { createSolanaRpc } from '@solana/kit'
+import { getRpcUrl } from './rpcConfig'
 
-const RPC_URL =
-  (import.meta as { env?: { VITE_SOLANA_RPC_URL?: string } })?.env?.VITE_SOLANA_RPC_URL ||
-  'https://api.devnet.solana.com'
+const RPC_URL = getRpcUrl()
 
 export function useRpc() {
   const rpc = useMemo(() => createSolanaRpc(RPC_URL), [])

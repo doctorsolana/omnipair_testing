@@ -92,8 +92,8 @@ button {
   z-index: 2;
   max-width: 1100px;
   margin: 0 auto 20px;
-  padding: 4px 12px;
-  height: 52px;
+  padding: 8px 16px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -115,7 +115,7 @@ button {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
 .brand {
@@ -156,14 +156,16 @@ button {
 
 .wallet-pill {
   position: relative;
-  padding: 6px 12px;
+  padding: 10px 20px;
+  min-height: 42px;
+  min-width: 178px;
   border-radius: var(--radius-blob-pill);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 15px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   color: #fff7ef;
   background: linear-gradient(180deg, #f5c58f 0%, #efb173 100%);
   box-shadow:
@@ -395,6 +397,96 @@ button {
   font-weight: 700;
 }
 
+.tab-placeholder {
+  border-radius: var(--radius-blob-md);
+  background: #f9fbff;
+  box-shadow: inset 0 0 0 1px rgba(205, 218, 248, 0.75);
+  padding: 18px;
+  text-align: center;
+}
+
+.tab-placeholder-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #3b4160;
+}
+
+.tab-placeholder p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.debug-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.debug-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.debug-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #3b4160;
+}
+
+.debug-top p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.debug-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.debug-card {
+  border-radius: var(--radius-blob-md);
+  background: #f9fbff;
+  box-shadow: inset 0 0 0 1px rgba(205, 218, 248, 0.75);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.debug-card h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.debug-list {
+  display: grid;
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.debug-list code,
+.debug-tx {
+  border-radius: var(--radius-blob-sm);
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(205, 218, 248, 0.75);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.debug-list span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.debug-tx {
+  display: grid;
+  gap: 4px;
+}
+
 .support-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -612,6 +704,10 @@ button {
   .market-change,
   .market-sparkline {
     justify-content: flex-start;
+  }
+
+  .debug-grid {
+    grid-template-columns: 1fr;
   }
 }
 
