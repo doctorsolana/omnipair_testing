@@ -1,23 +1,31 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import { useConnector } from '@solana/connector'
 import bs58 from 'bs58'
-import { getAddressEncoder, getProgramDerivedAddress, type Address } from '@solana/kit'
+import {
+  getAddressEncoder,
+  getBytesEncoder,
+  getProgramDerivedAddress,
+  type Address,
+} from '@solana/kit'
 import { ConnectWallet } from './solana/ConnectWallet'
 import PoolDetail from './PoolDetail'
+import NewPool from './NewPool'
 import {
   getBorrowInstructionAsync,
   getPairDecoder,
   getSwapInstructionAsync,
+  getUserPositionDecoder,
   OMNIPAIR_PROGRAM_ID,
   type Pair,
+  type UserPosition,
 } from './omnipair'
 import { useRpc } from './solana/useRpc'
 import { useSendSmartTransaction } from './solana/useSendSmartTransaction'
 
-type AppTab = 'Pools' | 'Trade' | 'Borrow' | 'Debug'
+type AppTab = 'Pools' | 'Trade' | 'Borrow' | 'Positions' | 'Debug'
 
-const APP_TABS: AppTab[] = ['Pools', 'Trade', 'Borrow', 'Debug']
+const APP_TABS: AppTab[] = ['Pools', 'Trade', 'Borrow', 'Positions', 'Debug']
 
 type ProgramAccountResult = {
   pubkey: string
@@ -28,6 +36,12 @@ type ProgramAccountWithData = {
   account: {
     data: [string, string] | string
   }
+}
+
+type AccountInfoResult = {
+  value: {
+    data: [string, string] | string
+  } | null
 }
 
 type SignatureResult = {
@@ -58,8 +72,120 @@ const DEFAULT_TRADE_TOKEN: TradeTokenOption = {
   color: 'linear-gradient(135deg, #9db8e4, #6f90c5)',
 }
 
+type TokenSelectProps = {
+  id?: string
+  value: string
+  options: TradeTokenOption[]
+  onChange: (value: string) => void
+  disabled?: boolean
+  ariaLabel: string
+}
+
+function TokenSelect({
+  id,
+  value,
+  options,
+  onChange,
+  disabled = false,
+  ariaLabel,
+}: TokenSelectProps) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const selected =
+    options.find((token) => token.mint === value) ??
+    options[0] ??
+    DEFAULT_TRADE_TOKEN
+
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (target && containerRef.current?.contains(target)) return
+      setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (disabled && open) setOpen(false)
+  }, [disabled, open])
+
+  useEffect(() => {
+    if (!options.length && open) setOpen(false)
+  }, [open, options.length])
+
+  return (
+    <div
+      ref={containerRef}
+      className={`token-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''}`}
+    >
+      <button
+        id={id}
+        type="button"
+        className="token-select-trigger"
+        onClick={() => {
+          if (disabled || !options.length) return
+          setOpen((current) => !current)
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        disabled={disabled}
+      >
+        <span
+          className="trade-token-logo"
+          style={{ background: selected.color }}
+          aria-hidden
+        >
+          {selected.logo}
+        </span>
+        <span className="trade-token-label">{selected.ticker}</span>
+        <span className="token-select-caret" aria-hidden>
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <div className="token-select-menu" role="listbox" aria-label={ariaLabel}>
+          {options.map((token) => (
+            <button
+              key={token.mint}
+              type="button"
+              role="option"
+              aria-selected={token.mint === selected.mint}
+              className={`token-select-option ${token.mint === selected.mint ? 'active' : ''}`}
+              onClick={() => {
+                onChange(token.mint)
+                setOpen(false)
+              }}
+            >
+              <span
+                className="trade-token-logo"
+                style={{ background: token.color }}
+                aria-hidden
+              >
+                {token.logo}
+              </span>
+              <span className="token-option-text">
+                <span className="token-option-main">{token.ticker}</span>
+                <span className="token-option-sub">{token.name}</span>
+              </span>
+            </button>
+          ))}
+          {!options.length && <div className="token-select-empty">No tokens available</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 type PoolView = {
   address: string
+  lpMint: string
   token0Ticker: string
   token1Ticker: string
   token0Mint: string
@@ -67,6 +193,16 @@ type PoolView = {
   token0Decimals: number
   token1Decimals: number
   rateModel: string
+  fixedCfBps: number | null
+  price: number
+  totalDebt0: bigint
+  totalDebt1: bigint
+  totalDebt0Shares: bigint
+  totalDebt1Shares: bigint
+  totalCollateral0: bigint
+  totalCollateral1: bigint
+  cashReserve0: bigint
+  cashReserve1: bigint
   symbol: string
   name: string
   priceLabel: string
@@ -86,11 +222,39 @@ type RpcTokenAccountsResult = {
   }>
 }
 
+type RpcTokenBalanceResult = {
+  value: {
+    uiAmount: number | null
+    uiAmountString: string
+  }
+}
+
 const PAIR_DISCRIMINATOR_B58 = bs58.encode(
   Uint8Array.from([85, 72, 49, 176, 182, 228, 141, 82]),
 )
 const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 const ASSOCIATED_TOKEN_PROGRAM_ID = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
+const GAMM_POSITION_SEED = new Uint8Array([
+  103, 97, 109, 109, 95, 112, 111, 115, 105, 116, 105, 111, 110,
+])
+
+type LoanPositionView = {
+  poolAddress: string
+  symbol: string
+  collateral0: number
+  collateral1: number
+  debt0: number
+  debt1: number
+  cf0: number | null
+  cf1: number | null
+}
+
+type LpPositionView = {
+  poolAddress: string
+  symbol: string
+  lpBalance: number
+  lpBalanceLabel: string
+}
 
 const KNOWN_TOKENS: Record<string, TokenInfo> = {
   So11111111111111111111111111111111111111112: { symbol: 'SOL', name: 'Solana' },
@@ -153,6 +317,21 @@ function toTicker(symbol: string) {
   return symbol.slice(0, 4).toUpperCase()
 }
 
+function unwrapOption<T>(value: unknown): T | null {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'object' && value && '__option' in value) {
+    const optionValue = value as { __option: 'Some' | 'None'; value?: T }
+    if (optionValue.__option === 'Some') return optionValue.value ?? null
+    return null
+  }
+  return value as T
+}
+
+function applyDebtFromShares(userShares: bigint, totalDebt: bigint, totalShares: bigint) {
+  if (totalShares === 0n) return 0n
+  return (userShares * totalDebt) / totalShares
+}
+
 function getTokenColor(seed: string) {
   const palette = [
     'linear-gradient(135deg, #70d4ff, #4f8ce8)',
@@ -186,6 +365,7 @@ function mapPairToPoolView(address: string, pair: Pair): PoolView {
 
   return {
     address,
+    lpMint: pair.lpMint,
     token0Ticker,
     token1Ticker,
     token0Mint: pair.token0,
@@ -193,6 +373,16 @@ function mapPairToPoolView(address: string, pair: Pair): PoolView {
     token0Decimals: pair.token0Decimals,
     token1Decimals: pair.token1Decimals,
     rateModel: pair.rateModel,
+    fixedCfBps: unwrapOption<number>(pair.fixedCfBps),
+    price,
+    totalDebt0: pair.totalDebt0,
+    totalDebt1: pair.totalDebt1,
+    totalDebt0Shares: pair.totalDebt0Shares,
+    totalDebt1Shares: pair.totalDebt1Shares,
+    totalCollateral0: pair.totalCollateral0,
+    totalCollateral1: pair.totalCollateral1,
+    cashReserve0: pair.cashReserve0,
+    cashReserve1: pair.cashReserve1,
     symbol: `${token0Ticker}/${token1Ticker}`,
     name: `${token0.name} / ${token1.name}`,
     priceLabel: Number.isFinite(price) ? `${price.toFixed(pricePrecision)} ${token1Ticker}` : '--',
@@ -214,6 +404,7 @@ function App() {
   const [walletOpen, setWalletOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<AppTab>('Pools')
   const activeTabIndex = Math.max(0, APP_TABS.indexOf(activeTab))
+  const walletDropdownRef = useRef<HTMLDivElement | null>(null)
 
   const [poolsLoading, setPoolsLoading] = useState(false)
   const [poolsError, setPoolsError] = useState<string | null>(null)
@@ -238,11 +429,29 @@ function App() {
   const [borrowSubmitting, setBorrowSubmitting] = useState(false)
   const [borrowStatus, setBorrowStatus] = useState<string | null>(null)
   const [borrowError, setBorrowError] = useState<string | null>(null)
+  const [positionsLoading, setPositionsLoading] = useState(false)
+  const [positionsError, setPositionsError] = useState<string | null>(null)
+  const [loanPositions, setLoanPositions] = useState<LoanPositionView[]>([])
+  const [lpPositions, setLpPositions] = useState<LpPositionView[]>([])
 
   const walletLabel = useMemo(() => {
     if (!isConnected || !account) return 'Connect Wallet'
     return `${account.slice(0, 4)}…${account.slice(-4)}`
   }, [account, isConnected])
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!walletOpen) return
+      const target = event.target as Node | null
+      if (target && walletDropdownRef.current?.contains(target)) return
+      setWalletOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [walletOpen])
 
   const tradeTokenOptions = useMemo<TradeTokenOption[]>(() => {
     const map = new Map<string, TradeTokenOption>()
@@ -275,15 +484,6 @@ function App() {
       tradeTokenOptions[0] ??
       DEFAULT_TRADE_TOKEN,
     [tradeFromToken, tradeTokenOptions],
-  )
-
-  const tradeToTokenInfo = useMemo(
-    () =>
-      tradeTokenOptions.find((token) => token.mint === tradeToToken) ??
-      tradeTokenOptions[1] ??
-      tradeTokenOptions[0] ??
-      DEFAULT_TRADE_TOKEN,
-    [tradeToToken, tradeTokenOptions],
   )
 
   const selectedTradePool = useMemo(() => {
@@ -367,6 +567,17 @@ function App() {
     })
   }, [])
 
+  const findUserPositionAddress = useCallback(async (pairAddress: string, owner: string) => {
+    return getProgramDerivedAddress({
+      programAddress: OMNIPAIR_PROGRAM_ID as Address,
+      seeds: [
+        getBytesEncoder().encode(GAMM_POSITION_SEED),
+        getAddressEncoder().encode(pairAddress as Address),
+        getAddressEncoder().encode(owner as Address),
+      ],
+    })
+  }, [])
+
   const getOwnedTokenAccount = useCallback(
     async (owner: string, mint: string) => {
       const result = await rpcRequest<RpcTokenAccountsResult>('getTokenAccountsByOwner', [
@@ -375,6 +586,18 @@ function App() {
         { commitment: 'confirmed', encoding: 'base64' },
       ])
       return result.value[0]?.pubkey ?? null
+    },
+    [rpcRequest],
+  )
+
+  const getTokenAccountBalance = useCallback(
+    async (tokenAccount: string | null) => {
+      if (!tokenAccount) return 0
+      const result = await rpcRequest<RpcTokenBalanceResult>('getTokenAccountBalance', [
+        tokenAccount,
+        { commitment: 'confirmed' },
+      ])
+      return result.value.uiAmount ?? 0
     },
     [rpcRequest],
   )
@@ -413,6 +636,107 @@ function App() {
     }
   }, [rpcRequest])
 
+  const loadPositionsData = useCallback(async () => {
+    if (!account || !isConnected) {
+      setLoanPositions([])
+      setLpPositions([])
+      setPositionsError(null)
+      return
+    }
+
+    if (!pools.length) {
+      setLoanPositions([])
+      setLpPositions([])
+      return
+    }
+
+    setPositionsLoading(true)
+    setPositionsError(null)
+
+    try {
+      const decoder = getUserPositionDecoder()
+      const entries = await Promise.all(
+        pools.map(async (pool) => {
+          const [positionAddress] = await findUserPositionAddress(pool.address, account)
+          const accountInfo = await rpcRequest<AccountInfoResult>('getAccountInfo', [
+            positionAddress,
+            { encoding: 'base64', commitment: 'confirmed' },
+          ])
+
+          let loanPosition: LoanPositionView | null = null
+
+          if (accountInfo.value) {
+            const encodedData = accountInfo.value.data
+            const base64Data = Array.isArray(encodedData) ? encodedData[0] : encodedData
+            if (typeof base64Data !== 'string') throw new Error('Invalid account data encoding')
+            const userPosition = decoder.decode(base64ToBytes(base64Data)) as UserPosition
+
+            const collateral0 = toDisplayNumber(userPosition.collateral0, pool.token0Decimals)
+            const collateral1 = toDisplayNumber(userPosition.collateral1, pool.token1Decimals)
+            const debt0 = toDisplayNumber(
+              applyDebtFromShares(userPosition.debt0Shares, pool.totalDebt0, pool.totalDebt0Shares),
+              pool.token0Decimals,
+            )
+            const debt1 = toDisplayNumber(
+              applyDebtFromShares(userPosition.debt1Shares, pool.totalDebt1, pool.totalDebt1Shares),
+              pool.token1Decimals,
+            )
+
+            if (collateral0 > 0 || collateral1 > 0 || debt0 > 0 || debt1 > 0) {
+              loanPosition = {
+                poolAddress: pool.address,
+                symbol: pool.symbol,
+                collateral0,
+                collateral1,
+                debt0,
+                debt1,
+                cf0: userPosition.collateral0AppliedMinCfBps,
+                cf1: userPosition.collateral1AppliedMinCfBps,
+              }
+            }
+          }
+
+          const lpTokenAccount = await getOwnedTokenAccount(account, pool.lpMint)
+          const lpBalance = await getTokenAccountBalance(lpTokenAccount)
+          const lpPosition: LpPositionView | null =
+            lpBalance > 0
+              ? {
+                  poolAddress: pool.address,
+                  symbol: pool.symbol,
+                  lpBalance,
+                  lpBalanceLabel: formatCompact(lpBalance, 4),
+                }
+              : null
+
+          return { loanPosition, lpPosition }
+        }),
+      )
+
+      setLoanPositions(
+        entries
+          .map((entry) => entry.loanPosition)
+          .filter((entry): entry is LoanPositionView => Boolean(entry)),
+      )
+      setLpPositions(
+        entries
+          .map((entry) => entry.lpPosition)
+          .filter((entry): entry is LpPositionView => Boolean(entry)),
+      )
+    } catch (error) {
+      setPositionsError(error instanceof Error ? error.message : 'Unable to load positions')
+    } finally {
+      setPositionsLoading(false)
+    }
+  }, [
+    account,
+    findUserPositionAddress,
+    getOwnedTokenAccount,
+    getTokenAccountBalance,
+    isConnected,
+    pools,
+    rpcRequest,
+  ])
+
   const loadDebugData = useCallback(async () => {
     setDebugLoading(true)
     setDebugError(null)
@@ -436,7 +760,14 @@ function App() {
   }, [hasLoadedPools, loadPools, rpcRequest])
 
   useEffect(() => {
-    if (activeTab !== 'Pools' && activeTab !== 'Trade') return
+    if (
+      activeTab !== 'Pools' &&
+      activeTab !== 'Trade' &&
+      activeTab !== 'Borrow' &&
+      activeTab !== 'Positions'
+    ) {
+      return
+    }
     if (hasLoadedPools) return
     void loadPools()
   }, [activeTab, hasLoadedPools, loadPools])
@@ -446,6 +777,16 @@ function App() {
     if (hasLoadedDebug) return
     void loadDebugData()
   }, [activeTab, hasLoadedDebug, loadDebugData])
+
+  useEffect(() => {
+    if (activeTab !== 'Positions') return
+    if (!isConnected || !account || !pools.length) {
+      setLoanPositions([])
+      setLpPositions([])
+      return
+    }
+    void loadPositionsData()
+  }, [account, activeTab, isConnected, loadPositionsData, pools.length])
 
   useEffect(() => {
     if (!tradeTokenOptions.length) return
@@ -653,6 +994,8 @@ function App() {
 
       const signature = await send([borrowInstruction as any])
       setBorrowStatus(`Borrow submitted: ${shortAddress(signature)}`)
+      void loadPools()
+      void loadPositionsData()
     } catch (error) {
       setBorrowError(error instanceof Error ? error.message : 'Borrow failed')
     } finally {
@@ -667,6 +1010,8 @@ function App() {
     borrowAmount,
     borrowTokenInfo,
     getOwnedTokenAccount,
+    loadPools,
+    loadPositionsData,
     simulate,
     send,
   ])
@@ -675,14 +1020,7 @@ function App() {
     <main className="content">
       <section className="market-shell">
         <div className="market-shell-card">
-          <div className="market-header">
-            <span className="rule" />
-            <div>
-              <h2>Live Market</h2>
-              <p>Top Crypto Pairs</p>
-            </div>
-            <span className="rule" />
-          </div>
+          <div className="market-header market-header-empty" />
 
           <div className="market-tabs-rail">
             <span className="tabs-rule" />
@@ -692,6 +1030,10 @@ function App() {
                 style={{
                   width: `${100 / APP_TABS.length}%`,
                   transform: `translateX(${activeTabIndex * 100}%)`,
+                  borderTopLeftRadius: activeTabIndex === 0 ? '999px' : '0',
+                  borderBottomLeftRadius: activeTabIndex === 0 ? '999px' : '0',
+                  borderTopRightRadius: activeTabIndex === APP_TABS.length - 1 ? '999px' : '0',
+                  borderBottomRightRadius: activeTabIndex === APP_TABS.length - 1 ? '999px' : '0',
                 }}
                 aria-hidden="true"
               />
@@ -713,6 +1055,10 @@ function App() {
               <>
                 <div className="pool-summary">
                   <span>{pools.length} pools</span>
+                  <Link to="/pools/new" className="pool-create-btn">
+                    <span className="pool-create-icon">＋</span>
+                    New Pool
+                  </Link>
                 </div>
 
                 {poolsError && <div className="status-block error">{poolsError}</div>}
@@ -785,28 +1131,13 @@ function App() {
                         onChange={(event) => setTradeFromAmount(event.target.value)}
                         inputMode="decimal"
                       />
-                      <div className="trade-token-picker">
-                        <span
-                          className="trade-token-logo"
-                          style={{ background: tradeFromTokenInfo.color }}
-                          aria-hidden
-                        >
-                          {tradeFromTokenInfo.logo}
-                        </span>
-                        <select
-                          value={tradeFromToken}
-                          onChange={(event) => setTradeFromToken(event.target.value)}
-                          className="trade-token-select"
-                          aria-label="Select token to swap from"
-                          disabled={!tradeTokenOptions.length}
-                        >
-                          {tradeTokenOptions.map((token) => (
-                            <option key={token.mint} value={token.mint}>
-                              {token.ticker}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <TokenSelect
+                        value={tradeFromToken}
+                        options={tradeTokenOptions}
+                        onChange={(value) => setTradeFromToken(value)}
+                        ariaLabel="Select token to swap from"
+                        disabled={!tradeTokenOptions.length}
+                      />
                     </div>
                   </div>
 
@@ -829,28 +1160,13 @@ function App() {
                         onChange={(event) => setTradeToAmount(event.target.value)}
                         inputMode="decimal"
                       />
-                      <div className="trade-token-picker">
-                        <span
-                          className="trade-token-logo"
-                          style={{ background: tradeToTokenInfo.color }}
-                          aria-hidden
-                        >
-                          {tradeToTokenInfo.logo}
-                        </span>
-                        <select
-                          value={tradeToToken}
-                          onChange={(event) => setTradeToToken(event.target.value)}
-                          className="trade-token-select"
-                          aria-label="Select token to swap to"
-                          disabled={!tradeTokenOptions.length}
-                        >
-                          {tradeTokenOptions.map((token) => (
-                            <option key={token.mint} value={token.mint}>
-                              {token.ticker}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <TokenSelect
+                        value={tradeToToken}
+                        options={tradeTokenOptions}
+                        onChange={(value) => setTradeToToken(value)}
+                        ariaLabel="Select token to swap to"
+                        disabled={!tradeTokenOptions.length}
+                      />
                     </div>
                   </div>
 
@@ -875,7 +1191,7 @@ function App() {
             )}
 
             {activeTab === 'Borrow' && (
-              <div className="trade-shell">
+              <div className="borrow-shell">
                 <section className="trade-card borrow-card">
                   {!pools.length && (
                     <div className="status-block">Load pools to enable borrowing.</div>
@@ -898,6 +1214,12 @@ function App() {
                     </select>
                   </div>
 
+                  {selectedBorrowPool?.statusLabel === 'Reduce-only' && (
+                    <div className="status-block error">
+                      This pool is reduce-only. Borrowing is currently disabled.
+                    </div>
+                  )}
+
                   <div className="trade-field">
                     <label htmlFor="borrow-amount">Amount</label>
                     <div className="trade-input-wrap">
@@ -908,28 +1230,13 @@ function App() {
                         onChange={(event) => setBorrowAmount(event.target.value)}
                         inputMode="decimal"
                       />
-                      <div className="trade-token-picker">
-                        <span
-                          className="trade-token-logo"
-                          style={{ background: borrowTokenInfo.color }}
-                          aria-hidden
-                        >
-                          {borrowTokenInfo.logo}
-                        </span>
-                        <select
-                          value={borrowToken}
-                          onChange={(event) => setBorrowToken(event.target.value)}
-                          className="trade-token-select"
-                          aria-label="Select token to borrow"
-                          disabled={!borrowTokenOptions.length}
-                        >
-                          {borrowTokenOptions.map((token) => (
-                            <option key={token.mint} value={token.mint}>
-                              {token.ticker}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <TokenSelect
+                        value={borrowToken}
+                        options={borrowTokenOptions}
+                        onChange={(value) => setBorrowToken(value)}
+                        ariaLabel="Select token to borrow"
+                        disabled={!borrowTokenOptions.length}
+                      />
                     </div>
                   </div>
 
@@ -940,11 +1247,91 @@ function App() {
                     type="button"
                     className="trade-submit"
                     onClick={executeBorrow}
-                    disabled={borrowSubmitting || !borrowToken || !borrowPool}
+                    disabled={
+                      borrowSubmitting ||
+                      !borrowToken ||
+                      !borrowPool ||
+                      selectedBorrowPool?.statusLabel === 'Reduce-only'
+                    }
                   >
                     {borrowSubmitting ? 'Submitting…' : 'Borrow'}
                   </button>
                 </section>
+              </div>
+            )}
+
+            {activeTab === 'Positions' && (
+              <div className="borrow-shell">
+                {!isConnected && (
+                  <div className="status-block">Connect wallet to view your positions.</div>
+                )}
+                {positionsLoading && isConnected && (
+                  <div className="status-block">Loading positions…</div>
+                )}
+                {positionsError && <div className="status-block error">{positionsError}</div>}
+
+                {isConnected && !positionsLoading && !positionsError && (
+                  <div className="positions-layout">
+                    <section className="positions-section">
+                      <header className="positions-head">
+                        <h3>LP Positions</h3>
+                        <span>{lpPositions.length}</span>
+                      </header>
+                      {!lpPositions.length && (
+                        <div className="status-block">No LP positions found.</div>
+                      )}
+                      {!!lpPositions.length && (
+                        <div className="positions-list">
+                          {lpPositions.map((position) => (
+                            <Link
+                              key={position.poolAddress}
+                              to={`/pools/${position.poolAddress}`}
+                              className="positions-item"
+                            >
+                              <span className="positions-pool">{position.symbol}</span>
+                              <span className="positions-value">{position.lpBalanceLabel} LP</span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+
+                    <section className="positions-section">
+                      <header className="positions-head">
+                        <h3>Loan Positions</h3>
+                        <span>{loanPositions.length}</span>
+                      </header>
+                      {!loanPositions.length && (
+                        <div className="status-block">No open loan positions found.</div>
+                      )}
+                      {!!loanPositions.length && (
+                        <div className="positions-list">
+                          {loanPositions.map((position) => (
+                            <Link
+                              key={position.poolAddress}
+                              to={`/pools/${position.poolAddress}`}
+                              className="positions-item positions-item-loan"
+                            >
+                              <span className="positions-pool">{position.symbol}</span>
+                              <span className="positions-value">
+                                Debt {formatCompact(position.debt0, 2)} /{' '}
+                                {formatCompact(position.debt1, 2)}
+                              </span>
+                              <span className="positions-meta">
+                                Collateral {formatCompact(position.collateral0, 2)} /{' '}
+                                {formatCompact(position.collateral1, 2)}
+                              </span>
+                              <span className="positions-meta">
+                                Min CF {position.cf0 ? `${(position.cf0 / 100).toFixed(2)}%` : '--'} /{' '}
+                                {position.cf1 ? `${(position.cf1 / 100).toFixed(2)}%` : '--'}
+                              </span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1016,7 +1403,10 @@ function App() {
             <span className="brand-name">omni_test</span>
           </div>
           <div className="header-actions">
-            <div className={`wallet-dropdown ${walletOpen ? 'open' : ''}`}>
+            <div
+              ref={walletDropdownRef}
+              className={`wallet-dropdown ${walletOpen ? 'open' : ''}`}
+            >
               <button className="wallet-pill" onClick={() => setWalletOpen((v) => !v)}>
                 {walletLabel}
               </button>
@@ -1031,6 +1421,7 @@ function App() {
       <Routes>
         <Route path="/" element={mainContent} />
         <Route path="/pools/:address" element={<PoolDetail />} />
+        <Route path="/pools/new" element={<NewPool />} />
       </Routes>
     </div>
   )
