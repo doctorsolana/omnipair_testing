@@ -302,7 +302,7 @@ function formatPercent(value: number) {
 
 function toBaseUnits(amount: string, decimals: number): bigint | null {
   const normalized = amount.trim()
-  if (!/^(?:\\d+|\\d*\\.\\d+)$/.test(normalized)) return null
+  if (!/^(?:\d+|\d*\.\d+)$/.test(normalized)) return null
 
   const [wholePart, fractionalPart = ''] = normalized.split('.')
   const whole = wholePart.length ? BigInt(wholePart) : 0n
@@ -1191,7 +1191,7 @@ function App() {
             )}
 
             {activeTab === 'Borrow' && (
-              <div className="borrow-shell">
+              <div className="borrow-shell borrow-center">
                 <section className="trade-card borrow-card">
                   {!pools.length && (
                     <div className="status-block">Load pools to enable borrowing.</div>

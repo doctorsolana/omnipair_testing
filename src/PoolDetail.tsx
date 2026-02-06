@@ -128,7 +128,7 @@ function toTicker(symbol: string) {
 
 function toBaseUnits(amount: string, decimals: number): bigint | null {
   const normalized = amount.trim()
-  if (!/^(?:\\d+|\\d*\\.\\d+)$/.test(normalized)) return null
+  if (!/^(?:\d+|\d*\.\d+)$/.test(normalized)) return null
 
   const [wholePart, fractionalPart = ''] = normalized.split('.')
   const whole = wholePart.length ? BigInt(wholePart) : 0n
@@ -139,7 +139,7 @@ function toBaseUnits(amount: string, decimals: number): bigint | null {
 
 function toDecimalInput(value: string): number | null {
   const normalized = value.trim()
-  if (!normalized || !/^(?:\\d+|\\d*\\.\\d+)$/.test(normalized)) return null
+  if (!normalized || !/^(?:\d+|\d*\.\d+)$/.test(normalized)) return null
   const parsed = Number(normalized)
   if (!Number.isFinite(parsed)) return null
   return parsed
@@ -617,7 +617,6 @@ function PoolDetail() {
           <Link to="/" className="back-link">
             ← Back to Markets
           </Link>
-          <span className="pool-program">Program {shortAddress(OMNIPAIR_PROGRAM_ID)}</span>
         </div>
 
         <div className="pool-detail-card">

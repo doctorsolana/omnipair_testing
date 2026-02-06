@@ -65,10 +65,11 @@ button {
 .page::before,
 .page::after {
   content: '';
-  position: absolute;
+  position: fixed;
   border-radius: 999px;
   filter: blur(0px);
   z-index: 0;
+  pointer-events: none;
 }
 
 .page::before {
@@ -747,6 +748,10 @@ button {
   gap: 16px;
 }
 
+.borrow-center {
+  place-items: center;
+}
+
 .positions-layout {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1290,10 +1295,6 @@ button {
     inset 0 0 0 1px rgba(205, 218, 248, 0.65),
     0 8px 14px rgba(121, 139, 191, 0.15);
   color: #46507b;
-}
-
-.pool-program {
-  color: #7781a7;
 }
 
 .pool-detail-card {
@@ -1999,11 +2000,6 @@ button {
   .pool-detail-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .pool-program {
-    font-size: 12px;
-    word-break: break-all;
   }
 
   .pool-detail-card {

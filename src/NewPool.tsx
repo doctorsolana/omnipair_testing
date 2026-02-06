@@ -24,6 +24,20 @@ const ASSOCIATED_TOKEN_PROGRAM_ID = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8kn
 const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
 const WSOL_MINT = 'So11111111111111111111111111111111111111112'
 const RENT_SYSVAR = 'SysvarRent111111111111111111111111111111111'
+const TOKEN_METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+const FUTARCHY_AUTHORITY_SEED = new Uint8Array([
+  102, 117, 116, 97, 114, 99, 104, 121, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+])
+const EVENT_AUTHORITY_SEED = new Uint8Array([
+  95, 95, 101, 118, 101, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
+])
+const METADATA_SEED = new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])
+const RESERVE_VAULT_SEED = new Uint8Array([
+  114, 101, 115, 101, 114, 118, 101, 95, 118, 97, 117, 108, 116,
+])
+const COLLATERAL_VAULT_SEED = new Uint8Array([
+  99, 111, 108, 108, 97, 116, 101, 114, 97, 108, 95, 118, 97, 117, 108, 116,
+])
 
 function toBaseUnits(amount: string, decimals = 6): bigint | null {
   const normalized = amount.trim()
@@ -259,6 +273,61 @@ function NewPool() {
       const lpAta = await findAssociatedTokenAddress(account, lpMintSigner.address)
       const wsolAta = await findAssociatedTokenAddress(account, WSOL_MINT)
 
+      const [futarchyAuthority] = await getProgramDerivedAddress({
+        programAddress: OMNIPAIR_PROGRAM_ID as Address,
+        seeds: [getBytesEncoder().encode(FUTARCHY_AUTHORITY_SEED)],
+      })
+
+      const [eventAuthority] = await getProgramDerivedAddress({
+        programAddress: OMNIPAIR_PROGRAM_ID as Address,
+        seeds: [getBytesEncoder().encode(EVENT_AUTHORITY_SEED)],
+      })
+
+      const [reserve0Vault] = await getProgramDerivedAddress({
+        programAddress: OMNIPAIR_PROGRAM_ID as Address,
+        seeds: [
+          getBytesEncoder().encode(RESERVE_VAULT_SEED),
+          getAddressEncoder().encode(pairAddress as Address),
+          getAddressEncoder().encode(token0 as Address),
+        ],
+      })
+
+      const [reserve1Vault] = await getProgramDerivedAddress({
+        programAddress: OMNIPAIR_PROGRAM_ID as Address,
+        seeds: [
+          getBytesEncoder().encode(RESERVE_VAULT_SEED),
+          getAddressEncoder().encode(pairAddress as Address),
+          getAddressEncoder().encode(token1 as Address),
+        ],
+      })
+
+      const [collateral0Vault] = await getProgramDerivedAddress({
+        programAddress: OMNIPAIR_PROGRAM_ID as Address,
+        seeds: [
+          getBytesEncoder().encode(COLLATERAL_VAULT_SEED),
+          getAddressEncoder().encode(pairAddress as Address),
+          getAddressEncoder().encode(token0 as Address),
+        ],
+      })
+
+      const [collateral1Vault] = await getProgramDerivedAddress({
+        programAddress: OMNIPAIR_PROGRAM_ID as Address,
+        seeds: [
+          getBytesEncoder().encode(COLLATERAL_VAULT_SEED),
+          getAddressEncoder().encode(pairAddress as Address),
+          getAddressEncoder().encode(token1 as Address),
+        ],
+      })
+
+      const [lpTokenMetadata] = await getProgramDerivedAddress({
+        programAddress: TOKEN_METADATA_PROGRAM_ID as Address,
+        seeds: [
+          getBytesEncoder().encode(METADATA_SEED),
+          getAddressEncoder().encode(TOKEN_METADATA_PROGRAM_ID as Address),
+          getAddressEncoder().encode(lpMintSigner.address as Address),
+        ],
+      })
+
       const lpAtaInfo = await rpc
         .getAccountInfo(lpAta as Address, { commitment: 'confirmed' })
         .send()
@@ -317,12 +386,19 @@ function NewPool() {
         token0Mint: token0 as Address,
         token1Mint: token1 as Address,
         pair: pairAddress as Address,
+        futarchyAuthority: futarchyAuthority as Address,
         rateModel: rateModelSigner,
         lpMint: lpMintSigner.address as Address,
+        lpTokenMetadata: lpTokenMetadata as Address,
         deployerLpTokenAccount: lpAta as Address,
+        reserve0Vault: reserve0Vault as Address,
+        reserve1Vault: reserve1Vault as Address,
+        collateral0Vault: collateral0Vault as Address,
+        collateral1Vault: collateral1Vault as Address,
         deployerToken0Account: deployerToken0 as Address,
         deployerToken1Account: deployerToken1 as Address,
         authorityWsolAccount: wsolAta as Address,
+        eventAuthority: eventAuthority as Address,
         program: OMNIPAIR_PROGRAM_ID as Address,
         swapFeeBps: fee,
         halfLife: halfLifeValue,
