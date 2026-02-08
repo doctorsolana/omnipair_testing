@@ -2661,6 +2661,83 @@ button {
 }
 
 @media (max-width: 640px) {
+  .market-row.pool-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'pair price'
+      'util fee'
+      'reserve reserve';
+    align-items: center;
+    gap: 6px 8px;
+    padding: 10px;
+  }
+
+  .market-row.pool-row > :nth-child(1) {
+    grid-area: pair;
+    min-width: 0;
+  }
+
+  .market-row.pool-row > :nth-child(2) {
+    grid-area: price;
+    justify-self: end;
+    min-width: 0;
+  }
+
+  .market-row.pool-row > :nth-child(3) {
+    grid-area: util;
+    justify-self: start;
+  }
+
+  .market-row.pool-row > :nth-child(4) {
+    grid-area: fee;
+    justify-self: end;
+  }
+
+  .market-row.pool-row > :nth-child(6) {
+    grid-area: reserve;
+    justify-self: start;
+    width: 100%;
+  }
+
+  .market-row.pool-row .pool-pill-inline.neutral,
+  .market-row.pool-row .pool-pill-inline.danger {
+    display: none;
+  }
+
+  .pool-pair-line {
+    font-size: 13px;
+  }
+
+  .pool-price-line {
+    font-size: 13px;
+    gap: 2px;
+    justify-content: flex-end;
+  }
+
+  .pool-price-sub {
+    display: none;
+  }
+
+  .pool-util-pill {
+    min-width: 0;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .pool-pill {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+
+  .pool-hint-inline {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.2;
+    font-size: 11px;
+    text-align: left;
+  }
+
   .page {
     padding: 24px 16px 72px;
   }
