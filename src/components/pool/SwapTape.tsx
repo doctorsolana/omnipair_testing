@@ -91,7 +91,6 @@ function SwapTape({ poolAddress, token0Ticker, token1Ticker, windowHours }: Swap
                 </span>
                 <span>Px {item.impliedPrice ? item.impliedPrice.toFixed(6) : '--'}</span>
                 <span className={`size-tier size-${item.sizeTier.toLowerCase()}`}>{item.sizeTier}</span>
-                <span className={`speed-tier speed-${item.speedTier.toLowerCase()}`}>{item.speedTier}</span>
                 <code title={item.txSignature}>{shortAddress(item.txSignature || 'unknown')}</code>
               </div>
             </article>

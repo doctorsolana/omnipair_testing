@@ -16,6 +16,7 @@
   "dependencies": {
     "@solana/connector": "^0.2.4",
     "@solana/kit": "^3.0.3",
+    "@solana/signers": "^3.0.3",
     "bs58": "^6.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

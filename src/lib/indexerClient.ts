@@ -185,7 +185,6 @@ export type BorrowRiskSnapshot = {
 }
 
 export type SwapSizeTier = 'S' | 'M' | 'L' | 'XL'
-export type SwapSpeedTier = 'Fast' | 'Normal' | 'Slow'
 
 export type SwapTapeItem = {
   id: string
@@ -197,7 +196,6 @@ export type SwapTapeItem = {
   impliedPrice: number | null
   isToken0In: boolean
   sizeTier: SwapSizeTier
-  speedTier: SwapSpeedTier
   slot: string
 }
 
@@ -341,13 +339,6 @@ function parseVolumeLike(value: unknown): number {
 function pctOf(part: number, total: number) {
   if (!Number.isFinite(part) || !Number.isFinite(total) || total <= 0) return 0
   return clamp((part / total) * 100, 0, 100)
-}
-
-function speedTier(deltaSeconds: number | null): SwapSpeedTier {
-  if (deltaSeconds === null) return 'Normal'
-  if (deltaSeconds < 45) return 'Fast'
-  if (deltaSeconds > 300) return 'Slow'
-  return 'Normal'
 }
 
 function sizeTier(value: number, values: number[]): SwapSizeTier {
@@ -563,18 +554,10 @@ export async function fetchSwapTape(
 
   const amountValues = swaps.map((item) => item.amountIn)
 
-  return swaps.map((item, index) => {
-    const previous = index === 0 ? null : swaps[index - 1]
-    const deltaSeconds = previous
-      ? Math.abs(new Date(previous.timestamp).getTime() - new Date(item.timestamp).getTime()) / 1000
-      : null
-
-    return {
-      ...item,
-      sizeTier: sizeTier(item.amountIn, amountValues),
-      speedTier: speedTier(deltaSeconds),
-    }
-  })
+  return swaps.map((item) => ({
+    ...item,
+    sizeTier: sizeTier(item.amountIn, amountValues),
+  }))
 }
 
 export async function fetchWalletJournal(

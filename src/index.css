@@ -1021,6 +1021,10 @@ button {
   z-index: 2;
 }
 
+.token-select.open {
+  z-index: 20;
+}
+
 .token-select.disabled {
   opacity: 0.6;
   pointer-events: none;
@@ -1100,6 +1104,7 @@ button {
   gap: 4px;
   transform-origin: top right;
   animation: tokenMenuIn 160ms ease;
+  z-index: 30;
 }
 
 .token-select-option {
@@ -2109,8 +2114,7 @@ button {
   color: #435389;
 }
 
-.size-tier,
-.speed-tier {
+.size-tier {
   padding: 1px 6px;
   border-radius: 999px;
   font-size: 10px;
@@ -2120,21 +2124,6 @@ button {
 .size-tier {
   background: rgba(121, 165, 235, 0.16);
   color: #4f6fb0;
-}
-
-.speed-tier {
-  background: rgba(134, 187, 159, 0.18);
-  color: #397e62;
-}
-
-.speed-tier.speed-fast {
-  background: rgba(75, 177, 143, 0.2);
-  color: #2f8f6d;
-}
-
-.speed-tier.speed-slow {
-  background: rgba(228, 94, 104, 0.15);
-  color: #cf646b;
 }
 
 .pool-workbench-grid {
