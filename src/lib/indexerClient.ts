@@ -375,10 +375,14 @@ export async function fetchPoolPerformance(
     }))
     .filter((point) => Number.isFinite(point.value) && point.value > 0)
 
-  const latest = series.length ? series[series.length - 1].value : null
+  const latestFromSeries = series.length ? series[series.length - 1].value : null
+  const latestFromChart = toNumber(chart.latestPrice)
+  const latestFallback =
+    Number.isFinite(latestFromChart) && latestFromChart > 0 ? latestFromChart : null
+  const latest = latestFromSeries ?? latestFallback
   const first = series.length ? series[0].value : null
-  const high = series.length ? Math.max(...series.map((point) => point.value)) : null
-  const low = series.length ? Math.min(...series.map((point) => point.value)) : null
+  const high = series.length ? Math.max(...series.map((point) => point.value)) : latest
+  const low = series.length ? Math.min(...series.map((point) => point.value)) : latest
   const changePct = first && latest ? ((latest - first) / first) * 100 : null
 
   const volume = volumeResult.status === 'fulfilled' ? volumeResult.value : null

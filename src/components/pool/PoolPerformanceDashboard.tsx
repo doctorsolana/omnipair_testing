@@ -7,6 +7,7 @@ type PoolPerformanceDashboardProps = {
   token0Ticker: string
   token1Ticker: string
   utilizationPct: number
+  fallbackLatestPrice?: number | null
   windowHours: 24 | 168 | 720
   onWindowChange: (value: 24 | 168 | 720) => void
 }
@@ -86,6 +87,7 @@ function PoolPerformanceDashboard({
   token0Ticker,
   token1Ticker,
   utilizationPct,
+  fallbackLatestPrice = null,
   windowHours,
   onWindowChange,
 }: PoolPerformanceDashboardProps) {
@@ -159,6 +161,14 @@ function PoolPerformanceDashboard({
     return buildChart(stats)
   }, [stats])
 
+  const latestPrice = useMemo(() => {
+    if (stats && stats.latestPrice !== null) return stats.latestPrice
+    if (fallbackLatestPrice !== null && Number.isFinite(fallbackLatestPrice) && fallbackLatestPrice > 0) {
+      return fallbackLatestPrice
+    }
+    return null
+  }, [fallbackLatestPrice, stats])
+
   const windowLabel = useMemo(() => {
     if (windowHours === 24) return '24h'
     if (windowHours === 168) return '7d'
@@ -220,7 +230,7 @@ function PoolPerformanceDashboard({
       {error && <div className="status-block error">{error}</div>}
       {!error && loading && !stats && <div className="status-block">Loading pool performance…</div>}
       {!error && !loading && stats && !chart && (
-        <div className="status-block">Not enough price history points for this window.</div>
+        <div className="status-block">No swaps in this window. Showing last known pool price below.</div>
       )}
 
       {!error && stats && chart && (
@@ -256,7 +266,7 @@ function PoolPerformanceDashboard({
       <div className="performance-rail">
         <article>
           <span>Latest Price</span>
-          <strong>{stats?.latestPrice !== null && stats ? formatChartPrice(stats.latestPrice) : '--'}</strong>
+          <strong>{latestPrice !== null ? formatChartPrice(latestPrice) : '--'}</strong>
           <small>{token1Ticker} per {token0Ticker}</small>
         </article>
         <article>

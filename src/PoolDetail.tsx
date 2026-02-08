@@ -31,6 +31,7 @@ type PoolDetailState = {
   name: string
   statusLabel: string
   feeLabel: string
+  price: number | null
   priceLabel: string
   priceSubLabel: string
   utilizationPct: number
@@ -186,6 +187,7 @@ function mapPairToDetail(address: string, pair: Pair): PoolDetailState {
     name: `${token0.name} / ${token1.name}`,
     statusLabel: pair.reduceOnly ? 'Reduce-only' : 'Active',
     feeLabel: `${(pair.swapFeeBps / 100).toFixed(2)}% fee`,
+    price: Number.isFinite(price) && price > 0 ? price : null,
     priceLabel: Number.isFinite(price) ? `${price.toFixed(pricePrecision)} ${token1Ticker}` : '--',
     priceSubLabel: `per ${token0Ticker}`,
     utilizationPct: utilization,
@@ -693,6 +695,7 @@ function PoolDetail() {
                   token0Ticker={detail.token0Ticker}
                   token1Ticker={detail.token1Ticker}
                   utilizationPct={detail.utilizationPct}
+                  fallbackLatestPrice={detail.price}
                   windowHours={analyticsWindowHours}
                   onWindowChange={setAnalyticsWindowHours}
                 />
