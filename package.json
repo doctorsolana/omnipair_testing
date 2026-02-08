@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "indexer:probe": "node scripts/indexer-probe.mjs",
     "idl:fetch": "anchor idl fetch --provider.cluster mainnet -o idl/omnipair.json omnixgS8fnqHfCcTGKWj6JtKjzpJZ1Y5y9pyFkQDkYE",
     "codama:gen": "codama run --all"
   },

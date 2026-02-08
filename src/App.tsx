@@ -11,6 +11,8 @@ import {
 import { ConnectWallet } from './solana/ConnectWallet'
 import PoolDetail from './PoolDetail'
 import NewPool from './NewPool'
+import PositionJournal from './components/positions/PositionJournal'
+import LiquidityHeatmap from './components/debug/LiquidityHeatmap'
 import {
   getBorrowInstructionAsync,
   getPairDecoder,
@@ -505,6 +507,14 @@ function App() {
   const selectedBorrowPool = useMemo(() => {
     return pools.find((pool) => pool.address === borrowPool) ?? pools[0] ?? null
   }, [borrowPool, pools])
+
+  const poolSymbolsByAddress = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {}
+    for (const pool of pools) {
+      map[pool.address] = pool.symbol
+    }
+    return map
+  }, [pools])
 
   const borrowTokenOptions = useMemo<TradeTokenOption[]>(() => {
     if (!selectedBorrowPool) return []
@@ -1332,6 +1342,12 @@ function App() {
                     </section>
                   </div>
                 )}
+
+                <PositionJournal
+                  isConnected={isConnected}
+                  walletAddress={account ?? undefined}
+                  poolSymbols={poolSymbolsByAddress}
+                />
               </div>
             )}
 
@@ -1374,6 +1390,8 @@ function App() {
                     </div>
                   </section>
                 </div>
+
+                <LiquidityHeatmap />
               </div>
             )}
 

@@ -16,6 +16,9 @@ import {
 } from './omnipair'
 import { useRpc } from './solana/useRpc'
 import { useSendSmartTransaction } from './solana/useSendSmartTransaction'
+import PoolPerformanceDashboard from './components/pool/PoolPerformanceDashboard'
+import BorrowRiskPanel from './components/pool/BorrowRiskPanel'
+import SwapTape from './components/pool/SwapTape'
 
 type TokenInfo = {
   symbol: string
@@ -30,6 +33,7 @@ type PoolDetailState = {
   feeLabel: string
   priceLabel: string
   priceSubLabel: string
+  utilizationPct: number
   utilizationLabel: string
   reserveLabel: string
   reserveTooltip: string
@@ -184,6 +188,7 @@ function mapPairToDetail(address: string, pair: Pair): PoolDetailState {
     feeLabel: `${(pair.swapFeeBps / 100).toFixed(2)}% fee`,
     priceLabel: Number.isFinite(price) ? `${price.toFixed(pricePrecision)} ${token1Ticker}` : '--',
     priceSubLabel: `per ${token0Ticker}`,
+    utilizationPct: utilization,
     utilizationLabel: formatPercent(utilization),
     reserveLabel: `${formatCompact(reserve0)} ${token0Ticker} / ${formatCompact(
       reserve1,
@@ -218,6 +223,7 @@ function PoolDetail() {
   const [token0Balance, setToken0Balance] = useState('0')
   const [token1Balance, setToken1Balance] = useState('0')
   const [lpBalance, setLpBalance] = useState('0')
+  const [analyticsWindowHours, setAnalyticsWindowHours] = useState<24 | 168 | 720>(24)
 
   const rpcRequest = useCallback(
     async <T,>(method: string, params: unknown[] = []) => {
@@ -680,6 +686,29 @@ function PoolDetail() {
                   <span className="pool-detail-sub">utilization curve</span>
                 </article>
               </section>
+
+              <div className="pool-analytics-grid">
+                <PoolPerformanceDashboard
+                  poolAddress={detail.address}
+                  token0Ticker={detail.token0Ticker}
+                  token1Ticker={detail.token1Ticker}
+                  utilizationPct={detail.utilizationPct}
+                  windowHours={analyticsWindowHours}
+                  onWindowChange={setAnalyticsWindowHours}
+                />
+                <BorrowRiskPanel
+                  poolAddress={detail.address}
+                  walletAddress={isConnected ? account ?? undefined : undefined}
+                  token0Ticker={detail.token0Ticker}
+                  token1Ticker={detail.token1Ticker}
+                />
+                <SwapTape
+                  poolAddress={detail.address}
+                  token0Ticker={detail.token0Ticker}
+                  token1Ticker={detail.token1Ticker}
+                  windowHours={analyticsWindowHours}
+                />
+              </div>
 
               <div className="pool-workbench-grid">
                 <section className="pool-liquidity-panel">
