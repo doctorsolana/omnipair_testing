@@ -1,6 +1,5 @@
 type RpcEnv = {
   VITE_SOLANA_RPC_URL?: string
-  VITE_RPC_URL?: string
 }
 
 function toNonEmpty(value?: string) {
@@ -11,11 +10,9 @@ function toNonEmpty(value?: string) {
 
 export function getRpcUrl() {
   const env = import.meta.env as RpcEnv
-  const rpcUrl = toNonEmpty(env.VITE_SOLANA_RPC_URL) ?? toNonEmpty(env.VITE_RPC_URL)
+  const rpcUrl = toNonEmpty(env.VITE_SOLANA_RPC_URL)
   if (!rpcUrl) {
-    throw new Error(
-      'Missing RPC URL. Set VITE_SOLANA_RPC_URL in .env (or VITE_RPC_URL) before starting the app.',
-    )
+    throw new Error('Missing RPC URL. Set VITE_SOLANA_RPC_URL in .env before starting the app.')
   }
   return rpcUrl
 }
