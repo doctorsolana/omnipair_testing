@@ -21,7 +21,6 @@ import {
   parseAddLiquidityInstruction,
   parseBorrowInstruction,
   parseClaimProtocolFeesInstruction,
-  parseDistributeTokensInstruction,
   parseFlashloanInstruction,
   parseInitFutarchyAuthorityInstruction,
   parseInitializeInstruction,
@@ -41,7 +40,6 @@ import {
   type ParsedAddLiquidityInstruction,
   type ParsedBorrowInstruction,
   type ParsedClaimProtocolFeesInstruction,
-  type ParsedDistributeTokensInstruction,
   type ParsedFlashloanInstruction,
   type ParsedInitFutarchyAuthorityInstruction,
   type ParsedInitializeInstruction,
@@ -127,7 +125,6 @@ export enum OmnipairInstruction {
   AddLiquidity,
   Borrow,
   ClaimProtocolFees,
-  DistributeTokens,
   Flashloan,
   InitFutarchyAuthority,
   Initialize,
@@ -192,17 +189,6 @@ export function identifyOmnipairInstruction(
     )
   ) {
     return OmnipairInstruction.ClaimProtocolFees;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([105, 69, 130, 52, 196, 28, 176, 120]),
-      ),
-      0,
-    )
-  ) {
-    return OmnipairInstruction.DistributeTokens;
   }
   if (
     containsBytes(
@@ -390,9 +376,6 @@ export type ParsedOmnipairInstruction<
       instructionType: OmnipairInstruction.ClaimProtocolFees;
     } & ParsedClaimProtocolFeesInstruction<TProgram>)
   | ({
-      instructionType: OmnipairInstruction.DistributeTokens;
-    } & ParsedDistributeTokensInstruction<TProgram>)
-  | ({
       instructionType: OmnipairInstruction.Flashloan;
     } & ParsedFlashloanInstruction<TProgram>)
   | ({
@@ -469,13 +452,6 @@ export function parseOmnipairInstruction<TProgram extends string>(
       return {
         instructionType: OmnipairInstruction.ClaimProtocolFees,
         ...parseClaimProtocolFeesInstruction(instruction),
-      };
-    }
-    case OmnipairInstruction.DistributeTokens: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: OmnipairInstruction.DistributeTokens,
-        ...parseDistributeTokensInstruction(instruction),
       };
     }
     case OmnipairInstruction.Flashloan: {

@@ -12,6 +12,7 @@ export * from "./adjustDebtArgs";
 export * from "./adjustDebtEvent";
 export * from "./adjustLiquidityEvent";
 export * from "./burnEvent";
+export * from "./claimProtocolFeesEvent";
 export * from "./eventMetadata";
 export * from "./flashloanEvent";
 export * from "./lastPriceEMA";

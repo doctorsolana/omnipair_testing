@@ -14,9 +14,15 @@ import { useConnector } from '@solana/connector'
 import { useRpc } from './solana/useRpc'
 import { useSendSmartTransaction } from './solana/useSendSmartTransaction'
 import {
+  COLLATERAL_VAULT_SEED_PREFIX,
+  EVENT_AUTHORITY_SEED_PREFIX,
+  FUTARCHY_AUTHORITY_SEED_PREFIX,
   getInitializeInstructionAsync,
+  METADATA_SEED_PREFIX,
+  PAIR_SEED_PREFIX,
   getRateModelSize,
   OMNIPAIR_PROGRAM_ID,
+  RESERVE_VAULT_SEED_PREFIX,
 } from './omnipair'
 
 const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
@@ -25,19 +31,6 @@ const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
 const WSOL_MINT = 'So11111111111111111111111111111111111111112'
 const RENT_SYSVAR = 'SysvarRent111111111111111111111111111111111'
 const TOKEN_METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
-const FUTARCHY_AUTHORITY_SEED = new Uint8Array([
-  102, 117, 116, 97, 114, 99, 104, 121, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
-])
-const EVENT_AUTHORITY_SEED = new Uint8Array([
-  95, 95, 101, 118, 101, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121,
-])
-const METADATA_SEED = new Uint8Array([109, 101, 116, 97, 100, 97, 116, 97])
-const RESERVE_VAULT_SEED = new Uint8Array([
-  114, 101, 115, 101, 114, 118, 101, 95, 118, 97, 117, 108, 116,
-])
-const COLLATERAL_VAULT_SEED = new Uint8Array([
-  99, 111, 108, 108, 97, 116, 101, 114, 97, 108, 95, 118, 97, 117, 108, 116,
-])
 
 function toBaseUnits(amount: string, decimals = 6): bigint | null {
   const normalized = amount.trim()
@@ -201,7 +194,7 @@ function NewPool() {
     const [pair] = await getProgramDerivedAddress({
       programAddress: OMNIPAIR_PROGRAM_ID as Address,
       seeds: [
-        getBytesEncoder().encode(new Uint8Array([103, 97, 109, 109, 95, 112, 97, 105, 114])),
+        getBytesEncoder().encode(PAIR_SEED_PREFIX),
         getAddressEncoder().encode(token0Mint as Address),
         getAddressEncoder().encode(token1Mint as Address),
         hash,
@@ -256,12 +249,12 @@ function NewPool() {
       const rateModelSpace = BigInt(getRateModelSize())
       const lpMintSpace = BigInt(82)
 
-  const rateModelLamports = BigInt(
-    await rpc.getMinimumBalanceForRentExemption(rateModelSpace).send(),
-  )
-  const lpMintLamports = BigInt(
-    await rpc.getMinimumBalanceForRentExemption(lpMintSpace).send(),
-  )
+      const rateModelLamports = BigInt(
+        await rpc.getMinimumBalanceForRentExemption(rateModelSpace).send(),
+      )
+      const lpMintLamports = BigInt(
+        await rpc.getMinimumBalanceForRentExemption(lpMintSpace).send(),
+      )
 
       const deployerToken0 = await getTokenAccount(account, token0)
       const deployerToken1 = await getTokenAccount(account, token1)
@@ -275,18 +268,18 @@ function NewPool() {
 
       const [futarchyAuthority] = await getProgramDerivedAddress({
         programAddress: OMNIPAIR_PROGRAM_ID as Address,
-        seeds: [getBytesEncoder().encode(FUTARCHY_AUTHORITY_SEED)],
+        seeds: [getBytesEncoder().encode(FUTARCHY_AUTHORITY_SEED_PREFIX)],
       })
 
       const [eventAuthority] = await getProgramDerivedAddress({
         programAddress: OMNIPAIR_PROGRAM_ID as Address,
-        seeds: [getBytesEncoder().encode(EVENT_AUTHORITY_SEED)],
+        seeds: [getBytesEncoder().encode(EVENT_AUTHORITY_SEED_PREFIX)],
       })
 
       const [reserve0Vault] = await getProgramDerivedAddress({
         programAddress: OMNIPAIR_PROGRAM_ID as Address,
         seeds: [
-          getBytesEncoder().encode(RESERVE_VAULT_SEED),
+          getBytesEncoder().encode(RESERVE_VAULT_SEED_PREFIX),
           getAddressEncoder().encode(pairAddress as Address),
           getAddressEncoder().encode(token0 as Address),
         ],
@@ -295,7 +288,7 @@ function NewPool() {
       const [reserve1Vault] = await getProgramDerivedAddress({
         programAddress: OMNIPAIR_PROGRAM_ID as Address,
         seeds: [
-          getBytesEncoder().encode(RESERVE_VAULT_SEED),
+          getBytesEncoder().encode(RESERVE_VAULT_SEED_PREFIX),
           getAddressEncoder().encode(pairAddress as Address),
           getAddressEncoder().encode(token1 as Address),
         ],
@@ -304,7 +297,7 @@ function NewPool() {
       const [collateral0Vault] = await getProgramDerivedAddress({
         programAddress: OMNIPAIR_PROGRAM_ID as Address,
         seeds: [
-          getBytesEncoder().encode(COLLATERAL_VAULT_SEED),
+          getBytesEncoder().encode(COLLATERAL_VAULT_SEED_PREFIX),
           getAddressEncoder().encode(pairAddress as Address),
           getAddressEncoder().encode(token0 as Address),
         ],
@@ -313,7 +306,7 @@ function NewPool() {
       const [collateral1Vault] = await getProgramDerivedAddress({
         programAddress: OMNIPAIR_PROGRAM_ID as Address,
         seeds: [
-          getBytesEncoder().encode(COLLATERAL_VAULT_SEED),
+          getBytesEncoder().encode(COLLATERAL_VAULT_SEED_PREFIX),
           getAddressEncoder().encode(pairAddress as Address),
           getAddressEncoder().encode(token1 as Address),
         ],
@@ -322,7 +315,7 @@ function NewPool() {
       const [lpTokenMetadata] = await getProgramDerivedAddress({
         programAddress: TOKEN_METADATA_PROGRAM_ID as Address,
         seeds: [
-          getBytesEncoder().encode(METADATA_SEED),
+          getBytesEncoder().encode(METADATA_SEED_PREFIX),
           getAddressEncoder().encode(TOKEN_METADATA_PROGRAM_ID as Address),
           getAddressEncoder().encode(lpMintSigner.address as Address),
         ],
@@ -397,7 +390,8 @@ function NewPool() {
         collateral1Vault: collateral1Vault as Address,
         deployerToken0Account: deployerToken0 as Address,
         deployerToken1Account: deployerToken1 as Address,
-        authorityWsolAccount: wsolAta as Address,
+        teamTreasury: account as Address,
+        teamTreasuryWsolAccount: wsolAta as Address,
         eventAuthority: eventAuthority as Address,
         program: OMNIPAIR_PROGRAM_ID as Address,
         swapFeeBps: fee,

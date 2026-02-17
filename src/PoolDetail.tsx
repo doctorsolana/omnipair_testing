@@ -11,6 +11,7 @@ import {
   getAddLiquidityInstructionAsync,
   getPairDecoder,
   getRemoveLiquidityInstructionAsync,
+  RESERVE_VAULT_SEED_PREFIX,
   type Pair,
   OMNIPAIR_PROGRAM_ID,
 } from './omnipair'
@@ -85,10 +86,6 @@ const KNOWN_TOKENS: Record<string, TokenInfo> = {
   jupSoLaJ53Uo89f9Jg7p8hGQ4w2FJv8r1v9h7QpJUP: { symbol: 'JUP', name: 'Jupiter' },
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6rPggD4R4D9x7GfP: { symbol: 'BONK', name: 'Bonk' },
 }
-
-const RESERVE_VAULT_SEED = new Uint8Array([
-  114, 101, 115, 101, 114, 118, 101, 95, 118, 97, 117, 108, 116,
-])
 
 function shortAddress(value: string) {
   if (value.length < 12) return value
@@ -347,7 +344,7 @@ function PoolDetail() {
     const [reserveVaultAddress] = await getProgramDerivedAddress({
       programAddress: OMNIPAIR_PROGRAM_ID as Address,
       seeds: [
-        getBytesEncoder().encode(RESERVE_VAULT_SEED),
+        getBytesEncoder().encode(RESERVE_VAULT_SEED_PREFIX),
         getAddressEncoder().encode(pairAddress as Address),
         getAddressEncoder().encode(mint as Address),
       ],

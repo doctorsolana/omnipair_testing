@@ -156,6 +156,8 @@ export const OMNIPAIR_ERROR__INVALID_RATE_PARAMS = 0x17b4; // 6068
 export const OMNIPAIR_ERROR__REDUCE_ONLY_MODE = 0x17b5; // 6069
 /** ReduceOnlyHasDebt: Cannot remove collateral in reduce-only mode while debt exists */
 export const OMNIPAIR_ERROR__REDUCE_ONLY_HAS_DEBT = 0x17b6; // 6070
+/** InvalidRecipient: Invalid recipient - address does not match configured revenue recipient */
+export const OMNIPAIR_ERROR__INVALID_RECIPIENT = 0x17b7; // 6071
 
 export type OmnipairError =
   | typeof OMNIPAIR_ERROR__ACCOUNT_NOT_EMPTY
@@ -201,6 +203,7 @@ export type OmnipairError =
   | typeof OMNIPAIR_ERROR__INVALID_PARAMS_HASH
   | typeof OMNIPAIR_ERROR__INVALID_RATE_MODEL
   | typeof OMNIPAIR_ERROR__INVALID_RATE_PARAMS
+  | typeof OMNIPAIR_ERROR__INVALID_RECIPIENT
   | typeof OMNIPAIR_ERROR__INVALID_SWAP_FEE_BPS
   | typeof OMNIPAIR_ERROR__INVALID_TOKEN_ACCOUNT
   | typeof OMNIPAIR_ERROR__INVALID_TOKEN_ORDER
@@ -276,6 +279,7 @@ if (process.env.NODE_ENV !== "production") {
     [OMNIPAIR_ERROR__INVALID_PARAMS_HASH]: `Invalid params hash - hash does not match computed parameters`,
     [OMNIPAIR_ERROR__INVALID_RATE_MODEL]: `Invalid rate model - rate_model does not match pair.rate_model`,
     [OMNIPAIR_ERROR__INVALID_RATE_PARAMS]: `Invalid rate parameters - check half_life_ms, min_rate_bps, max_rate_bps, initial_rate_bps bounds`,
+    [OMNIPAIR_ERROR__INVALID_RECIPIENT]: `Invalid recipient - address does not match configured revenue recipient`,
     [OMNIPAIR_ERROR__INVALID_SWAP_FEE_BPS]: `Invalid swap fee bps`,
     [OMNIPAIR_ERROR__INVALID_TOKEN_ACCOUNT]: `Invalid token account`,
     [OMNIPAIR_ERROR__INVALID_TOKEN_ORDER]: `Invalid token order`,

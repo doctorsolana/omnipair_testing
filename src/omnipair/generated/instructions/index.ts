@@ -10,7 +10,6 @@ export * from "./addCollateral";
 export * from "./addLiquidity";
 export * from "./borrow";
 export * from "./claimProtocolFees";
-export * from "./distributeTokens";
 export * from "./flashloan";
 export * from "./initFutarchyAuthority";
 export * from "./initialize";

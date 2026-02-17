@@ -80,7 +80,8 @@ export type InitializeInstruction<
   TAccountCollateral1Vault extends string | AccountMeta<string> = string,
   TAccountDeployerToken0Account extends string | AccountMeta<string> = string,
   TAccountDeployerToken1Account extends string | AccountMeta<string> = string,
-  TAccountAuthorityWsolAccount extends string | AccountMeta<string> = string,
+  TAccountTeamTreasury extends string | AccountMeta<string> = string,
+  TAccountTeamTreasuryWsolAccount extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends string | AccountMeta<string> =
     "11111111111111111111111111111111",
   TAccountTokenProgram extends string | AccountMeta<string> =
@@ -147,9 +148,12 @@ export type InitializeInstruction<
       TAccountDeployerToken1Account extends string
         ? WritableAccount<TAccountDeployerToken1Account>
         : TAccountDeployerToken1Account,
-      TAccountAuthorityWsolAccount extends string
-        ? WritableAccount<TAccountAuthorityWsolAccount>
-        : TAccountAuthorityWsolAccount,
+      TAccountTeamTreasury extends string
+        ? ReadonlyAccount<TAccountTeamTreasury>
+        : TAccountTeamTreasury,
+      TAccountTeamTreasuryWsolAccount extends string
+        ? WritableAccount<TAccountTeamTreasuryWsolAccount>
+        : TAccountTeamTreasuryWsolAccount,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -294,7 +298,8 @@ export type InitializeAsyncInput<
   TAccountCollateral1Vault extends string = string,
   TAccountDeployerToken0Account extends string = string,
   TAccountDeployerToken1Account extends string = string,
-  TAccountAuthorityWsolAccount extends string = string,
+  TAccountTeamTreasury extends string = string,
+  TAccountTeamTreasuryWsolAccount extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountToken2022Program extends string = string,
@@ -319,7 +324,8 @@ export type InitializeAsyncInput<
   collateral1Vault?: Address<TAccountCollateral1Vault>;
   deployerToken0Account: Address<TAccountDeployerToken0Account>;
   deployerToken1Account: Address<TAccountDeployerToken1Account>;
-  authorityWsolAccount: Address<TAccountAuthorityWsolAccount>;
+  teamTreasury: Address<TAccountTeamTreasury>;
+  teamTreasuryWsolAccount: Address<TAccountTeamTreasuryWsolAccount>;
   systemProgram?: Address<TAccountSystemProgram>;
   tokenProgram?: Address<TAccountTokenProgram>;
   token2022Program?: Address<TAccountToken2022Program>;
@@ -363,7 +369,8 @@ export async function getInitializeInstructionAsync<
   TAccountCollateral1Vault extends string,
   TAccountDeployerToken0Account extends string,
   TAccountDeployerToken1Account extends string,
-  TAccountAuthorityWsolAccount extends string,
+  TAccountTeamTreasury extends string,
+  TAccountTeamTreasuryWsolAccount extends string,
   TAccountSystemProgram extends string,
   TAccountTokenProgram extends string,
   TAccountToken2022Program extends string,
@@ -390,7 +397,8 @@ export async function getInitializeInstructionAsync<
     TAccountCollateral1Vault,
     TAccountDeployerToken0Account,
     TAccountDeployerToken1Account,
-    TAccountAuthorityWsolAccount,
+    TAccountTeamTreasury,
+    TAccountTeamTreasuryWsolAccount,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountToken2022Program,
@@ -419,7 +427,8 @@ export async function getInitializeInstructionAsync<
     TAccountCollateral1Vault,
     TAccountDeployerToken0Account,
     TAccountDeployerToken1Account,
-    TAccountAuthorityWsolAccount,
+    TAccountTeamTreasury,
+    TAccountTeamTreasuryWsolAccount,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountToken2022Program,
@@ -468,8 +477,9 @@ export async function getInitializeInstructionAsync<
       value: input.deployerToken1Account ?? null,
       isWritable: true,
     },
-    authorityWsolAccount: {
-      value: input.authorityWsolAccount ?? null,
+    teamTreasury: { value: input.teamTreasury ?? null, isWritable: false },
+    teamTreasuryWsolAccount: {
+      value: input.teamTreasuryWsolAccount ?? null,
       isWritable: true,
     },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
@@ -645,7 +655,8 @@ export async function getInitializeInstructionAsync<
       getAccountMeta(accounts.collateral1Vault),
       getAccountMeta(accounts.deployerToken0Account),
       getAccountMeta(accounts.deployerToken1Account),
-      getAccountMeta(accounts.authorityWsolAccount),
+      getAccountMeta(accounts.teamTreasury),
+      getAccountMeta(accounts.teamTreasuryWsolAccount),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.token2022Program),
@@ -676,7 +687,8 @@ export async function getInitializeInstructionAsync<
     TAccountCollateral1Vault,
     TAccountDeployerToken0Account,
     TAccountDeployerToken1Account,
-    TAccountAuthorityWsolAccount,
+    TAccountTeamTreasury,
+    TAccountTeamTreasuryWsolAccount,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountToken2022Program,
@@ -704,7 +716,8 @@ export type InitializeInput<
   TAccountCollateral1Vault extends string = string,
   TAccountDeployerToken0Account extends string = string,
   TAccountDeployerToken1Account extends string = string,
-  TAccountAuthorityWsolAccount extends string = string,
+  TAccountTeamTreasury extends string = string,
+  TAccountTeamTreasuryWsolAccount extends string = string,
   TAccountSystemProgram extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountToken2022Program extends string = string,
@@ -729,7 +742,8 @@ export type InitializeInput<
   collateral1Vault: Address<TAccountCollateral1Vault>;
   deployerToken0Account: Address<TAccountDeployerToken0Account>;
   deployerToken1Account: Address<TAccountDeployerToken1Account>;
-  authorityWsolAccount: Address<TAccountAuthorityWsolAccount>;
+  teamTreasury: Address<TAccountTeamTreasury>;
+  teamTreasuryWsolAccount: Address<TAccountTeamTreasuryWsolAccount>;
   systemProgram?: Address<TAccountSystemProgram>;
   tokenProgram?: Address<TAccountTokenProgram>;
   token2022Program?: Address<TAccountToken2022Program>;
@@ -773,7 +787,8 @@ export function getInitializeInstruction<
   TAccountCollateral1Vault extends string,
   TAccountDeployerToken0Account extends string,
   TAccountDeployerToken1Account extends string,
-  TAccountAuthorityWsolAccount extends string,
+  TAccountTeamTreasury extends string,
+  TAccountTeamTreasuryWsolAccount extends string,
   TAccountSystemProgram extends string,
   TAccountTokenProgram extends string,
   TAccountToken2022Program extends string,
@@ -800,7 +815,8 @@ export function getInitializeInstruction<
     TAccountCollateral1Vault,
     TAccountDeployerToken0Account,
     TAccountDeployerToken1Account,
-    TAccountAuthorityWsolAccount,
+    TAccountTeamTreasury,
+    TAccountTeamTreasuryWsolAccount,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountToken2022Program,
@@ -828,7 +844,8 @@ export function getInitializeInstruction<
   TAccountCollateral1Vault,
   TAccountDeployerToken0Account,
   TAccountDeployerToken1Account,
-  TAccountAuthorityWsolAccount,
+  TAccountTeamTreasury,
+  TAccountTeamTreasuryWsolAccount,
   TAccountSystemProgram,
   TAccountTokenProgram,
   TAccountToken2022Program,
@@ -876,8 +893,9 @@ export function getInitializeInstruction<
       value: input.deployerToken1Account ?? null,
       isWritable: true,
     },
-    authorityWsolAccount: {
-      value: input.authorityWsolAccount ?? null,
+    teamTreasury: { value: input.teamTreasury ?? null, isWritable: false },
+    teamTreasuryWsolAccount: {
+      value: input.teamTreasuryWsolAccount ?? null,
       isWritable: true,
     },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
@@ -950,7 +968,8 @@ export function getInitializeInstruction<
       getAccountMeta(accounts.collateral1Vault),
       getAccountMeta(accounts.deployerToken0Account),
       getAccountMeta(accounts.deployerToken1Account),
-      getAccountMeta(accounts.authorityWsolAccount),
+      getAccountMeta(accounts.teamTreasury),
+      getAccountMeta(accounts.teamTreasuryWsolAccount),
       getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.token2022Program),
@@ -981,7 +1000,8 @@ export function getInitializeInstruction<
     TAccountCollateral1Vault,
     TAccountDeployerToken0Account,
     TAccountDeployerToken1Account,
-    TAccountAuthorityWsolAccount,
+    TAccountTeamTreasury,
+    TAccountTeamTreasuryWsolAccount,
     TAccountSystemProgram,
     TAccountTokenProgram,
     TAccountToken2022Program,
@@ -1014,15 +1034,16 @@ export type ParsedInitializeInstruction<
     collateral1Vault: TAccountMetas[12];
     deployerToken0Account: TAccountMetas[13];
     deployerToken1Account: TAccountMetas[14];
-    authorityWsolAccount: TAccountMetas[15];
-    systemProgram: TAccountMetas[16];
-    tokenProgram: TAccountMetas[17];
-    token2022Program: TAccountMetas[18];
-    tokenMetadataProgram: TAccountMetas[19];
-    associatedTokenProgram: TAccountMetas[20];
-    rent: TAccountMetas[21];
-    eventAuthority: TAccountMetas[22];
-    program: TAccountMetas[23];
+    teamTreasury: TAccountMetas[15];
+    teamTreasuryWsolAccount: TAccountMetas[16];
+    systemProgram: TAccountMetas[17];
+    tokenProgram: TAccountMetas[18];
+    token2022Program: TAccountMetas[19];
+    tokenMetadataProgram: TAccountMetas[20];
+    associatedTokenProgram: TAccountMetas[21];
+    rent: TAccountMetas[22];
+    eventAuthority: TAccountMetas[23];
+    program: TAccountMetas[24];
   };
   data: InitializeInstructionData;
 };
@@ -1035,7 +1056,7 @@ export function parseInitializeInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedInitializeInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 24) {
+  if (instruction.accounts.length < 25) {
     // TODO: Coded error.
     throw new Error("Not enough accounts");
   }
@@ -1063,7 +1084,8 @@ export function parseInitializeInstruction<
       collateral1Vault: getNextAccount(),
       deployerToken0Account: getNextAccount(),
       deployerToken1Account: getNextAccount(),
-      authorityWsolAccount: getNextAccount(),
+      teamTreasury: getNextAccount(),
+      teamTreasuryWsolAccount: getNextAccount(),
       systemProgram: getNextAccount(),
       tokenProgram: getNextAccount(),
       token2022Program: getNextAccount(),

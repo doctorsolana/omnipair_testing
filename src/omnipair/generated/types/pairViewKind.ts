@@ -27,6 +27,9 @@ export enum PairViewKind {
   K,
   GetRates,
   GetBorrowLimitAndCfBpsForCollateral,
+  Reserves,
+  CashReserves,
+  SwapQuote,
 }
 
 export type PairViewKindArgs = PairViewKind;

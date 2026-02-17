@@ -30,6 +30,8 @@ export type UserLiquidityPositionUpdatedEvent = {
   token0Amount: bigint;
   token1Amount: bigint;
   lpAmount: bigint;
+  cashReserve0: bigint;
+  cashReserve1: bigint;
   token0Mint: Address;
   token1Mint: Address;
   lpMint: Address;
@@ -40,6 +42,8 @@ export type UserLiquidityPositionUpdatedEventArgs = {
   token0Amount: number | bigint;
   token1Amount: number | bigint;
   lpAmount: number | bigint;
+  cashReserve0: number | bigint;
+  cashReserve1: number | bigint;
   token0Mint: Address;
   token1Mint: Address;
   lpMint: Address;
@@ -51,6 +55,8 @@ export function getUserLiquidityPositionUpdatedEventEncoder(): FixedSizeEncoder<
     ["token0Amount", getU64Encoder()],
     ["token1Amount", getU64Encoder()],
     ["lpAmount", getU64Encoder()],
+    ["cashReserve0", getU64Encoder()],
+    ["cashReserve1", getU64Encoder()],
     ["token0Mint", getAddressEncoder()],
     ["token1Mint", getAddressEncoder()],
     ["lpMint", getAddressEncoder()],
@@ -63,6 +69,8 @@ export function getUserLiquidityPositionUpdatedEventDecoder(): FixedSizeDecoder<
     ["token0Amount", getU64Decoder()],
     ["token1Amount", getU64Decoder()],
     ["lpAmount", getU64Decoder()],
+    ["cashReserve0", getU64Decoder()],
+    ["cashReserve1", getU64Decoder()],
     ["token0Mint", getAddressDecoder()],
     ["token1Mint", getAddressDecoder()],
     ["lpMint", getAddressDecoder()],

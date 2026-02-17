@@ -71,6 +71,34 @@
       "value": "[99, 111, 108, 108, 97, 116, 101, 114, 97, 108, 95, 118, 97, 117, 108, 116]"
     },
     {
+      "docs": [
+        "Debt share scaling factor for increased precision floor in rounded division."
+      ],
+      "name": "DEBT_SHARE_SCALE",
+      "type": "u64",
+      "value": "1000000"
+    },
+    {
+      "name": "DEFAULT_INITIAL_RATE_BPS",
+      "type": "u64",
+      "value": "200"
+    },
+    {
+      "name": "DEFAULT_MAX_RATE_BPS",
+      "type": "u64",
+      "value": "0"
+    },
+    {
+      "name": "DEFAULT_MIN_RATE_BPS",
+      "type": "u64",
+      "value": "100"
+    },
+    {
+      "name": "DEFAULT_RATE_HALF_LIFE_MS",
+      "type": "u64",
+      "value": "86400000"
+    },
+    {
       "name": "DIRECTIONAL_EMA_HALF_LIFE_MS",
       "type": "u64",
       "value": "3000"
@@ -106,14 +134,69 @@
       "value": "500"
     },
     {
+      "name": "MAX_ALLOWED_RATE_BPS",
+      "type": "u64",
+      "value": "100000"
+    },
+    {
       "name": "MAX_COLLATERAL_FACTOR_BPS",
       "type": "u16",
       "value": "8500"
     },
     {
+      "name": "MAX_INITIAL_RATE_BPS",
+      "type": "u64",
+      "value": "10000"
+    },
+    {
+      "name": "MAX_RATE_HALF_LIFE_MS",
+      "type": "u64",
+      "value": "2592000000"
+    },
+    {
+      "name": "MAX_TARGET_UTIL_BPS",
+      "type": "u64",
+      "value": "10000"
+    },
+    {
       "name": "METADATA_SEED_PREFIX",
       "type": "bytes",
       "value": "[109, 101, 116, 97, 100, 97, 116, 97]"
+    },
+    {
+      "name": "MILLISECONDS_PER_YEAR",
+      "type": "u64",
+      "value": "31536000000"
+    },
+    {
+      "name": "MIN_ALLOWED_RATE_BPS",
+      "type": "u64",
+      "value": "0"
+    },
+    {
+      "name": "MIN_INITIAL_RATE_BPS",
+      "type": "u64",
+      "value": "10"
+    },
+    {
+      "name": "MIN_LIQUIDITY",
+      "type": "u64",
+      "value": "1000"
+    },
+    {
+      "name": "MIN_RATE_HALF_LIFE_MS",
+      "type": "u64",
+      "value": "3600000"
+    },
+    {
+      "name": "MIN_TARGET_UTIL_BPS",
+      "type": "u64",
+      "value": "100"
+    },
+    {
+      "name": "MS_PER_DAY",
+      "type": "u64",
+      "value": "86400000"
     },
     {
       "docs": [
@@ -155,6 +238,16 @@
       "name": "TARGET_MS_PER_SLOT",
       "type": "u64",
       "value": "400"
+    },
+    {
+      "name": "TARGET_UTIL_END_BPS",
+      "type": "u64",
+      "value": "8500"
+    },
+    {
+      "name": "TARGET_UTIL_START_BPS",
+      "type": "u64",
+      "value": "5000"
     },
     {
       "name": "VERSION",
@@ -517,6 +610,11 @@
       "code": 6070,
       "msg": "Cannot remove collateral in reduce-only mode while debt exists",
       "name": "ReduceOnlyHasDebt"
+    },
+    {
+      "code": 6071,
+      "msg": "Invalid recipient - address does not match configured revenue recipient",
+      "name": "InvalidRecipient"
     }
   ],
   "events": [
@@ -571,6 +669,19 @@
         250
       ],
       "name": "BurnEvent"
+    },
+    {
+      "discriminator": [
+        131,
+        163,
+        209,
+        112,
+        123,
+        133,
+        105,
+        235
+      ],
+      "name": "ClaimProtocolFeesEvent"
     },
     {
       "discriminator": [
@@ -1613,7 +1724,13 @@
           "writable": true
         },
         {
-          "name": "authority_token0_account",
+          "name": "token0_mint"
+        },
+        {
+          "name": "token1_mint"
+        },
+        {
+          "name": "futarchy_treasury_token0",
           "pda": {
             "program": {
               "kind": "const",
@@ -1655,7 +1772,7 @@
             "seeds": [
               {
                 "kind": "account",
-                "path": "futarchy_authority"
+                "path": "futarchy_treasury"
               },
               {
                 "kind": "const",
@@ -1703,7 +1820,7 @@
           "writable": true
         },
         {
-          "name": "authority_token1_account",
+          "name": "futarchy_treasury_token1",
           "pda": {
             "program": {
               "kind": "const",
@@ -1745,7 +1862,7 @@
             "seeds": [
               {
                 "kind": "account",
-                "path": "futarchy_authority"
+                "path": "futarchy_treasury"
               },
               {
                 "kind": "const",
@@ -1793,10 +1910,373 @@
           "writable": true
         },
         {
-          "name": "token0_mint"
+          "name": "futarchy_treasury"
         },
         {
-          "name": "token1_mint"
+          "name": "buybacks_vault_token0",
+          "pda": {
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            },
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buybacks_vault"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token0_mint"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "buybacks_vault_token1",
+          "pda": {
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            },
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "buybacks_vault"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token1_mint"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "buybacks_vault"
+        },
+        {
+          "name": "team_treasury_token0",
+          "pda": {
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            },
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "team_treasury"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token0_mint"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "team_treasury_token1",
+          "pda": {
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            },
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "team_treasury"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token1_mint"
+              }
+            ]
+          },
+          "writable": true
+        },
+        {
+          "name": "team_treasury"
         },
         {
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
@@ -1826,85 +2306,11 @@
         133,
         23
       ],
+      "docs": [
+        "Claims protocol fees from a pair and distributes directly to revenue recipients.",
+        "This instruction is permissionless - anyone can trigger fee distribution."
+      ],
       "name": "claim_protocol_fees"
-    },
-    {
-      "accounts": [
-        {
-          "name": "futarchy_authority",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  102,
-                  117,
-                  116,
-                  97,
-                  114,
-                  99,
-                  104,
-                  121,
-                  95,
-                  97,
-                  117,
-                  116,
-                  104,
-                  111,
-                  114,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "source_mint"
-        },
-        {
-          "name": "source_token_account",
-          "writable": true
-        },
-        {
-          "name": "futarchy_treasury_token_account",
-          "writable": true
-        },
-        {
-          "name": "buybacks_vault_token_account",
-          "writable": true
-        },
-        {
-          "name": "team_treasury_token_account",
-          "writable": true
-        },
-        {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          "name": "token_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "args",
-          "type": {
-            "defined": {
-              "name": "DistributeTokensArgs"
-            }
-          }
-        }
-      ],
-      "discriminator": [
-        105,
-        69,
-        130,
-        52,
-        196,
-        28,
-        176,
-        120
-      ],
-      "name": "distribute_tokens"
     },
     {
       "accounts": [
@@ -2626,7 +3032,10 @@
           "writable": true
         },
         {
-          "name": "authority_wsol_account",
+          "name": "team_treasury"
+        },
+        {
+          "name": "team_treasury_wsol_account",
           "writable": true
         },
         {
@@ -4051,96 +4460,6 @@
           "name": "token_out_mint"
         },
         {
-          "name": "authority_token_in_account",
-          "pda": {
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            },
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "futarchy_authority"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  6,
-                  221,
-                  246,
-                  225,
-                  215,
-                  101,
-                  161,
-                  147,
-                  217,
-                  203,
-                  225,
-                  70,
-                  206,
-                  235,
-                  121,
-                  172,
-                  28,
-                  180,
-                  133,
-                  237,
-                  95,
-                  91,
-                  55,
-                  145,
-                  58,
-                  140,
-                  245,
-                  133,
-                  126,
-                  255,
-                  0,
-                  169
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "token_in_mint"
-              }
-            ]
-          },
-          "writable": true
-        },
-        {
           "name": "user",
           "signer": true,
           "writable": true
@@ -4152,14 +4471,6 @@
         {
           "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
           "name": "token_2022_program"
-        },
-        {
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-          "name": "associated_token_program"
-        },
-        {
-          "address": "11111111111111111111111111111111",
-          "name": "system_program"
         },
         {
           "name": "event_authority",
@@ -4554,7 +4865,7 @@
     "description": "Oracless spot and margin money market protocol",
     "name": "omnipair",
     "spec": "0.1.0",
-    "version": "0.8.0"
+    "version": "0.9.5"
   },
   "types": [
     {
@@ -4706,9 +5017,50 @@
       }
     },
     {
-      "name": "DistributeTokensArgs",
+      "name": "ClaimProtocolFeesEvent",
       "type": {
-        "fields": [],
+        "fields": [
+          {
+            "name": "token0",
+            "type": "pubkey"
+          },
+          {
+            "name": "token1",
+            "type": "pubkey"
+          },
+          {
+            "name": "futarchy_treasury_amount0",
+            "type": "u64"
+          },
+          {
+            "name": "futarchy_treasury_amount1",
+            "type": "u64"
+          },
+          {
+            "name": "buybacks_vault_amount0",
+            "type": "u64"
+          },
+          {
+            "name": "buybacks_vault_amount1",
+            "type": "u64"
+          },
+          {
+            "name": "team_treasury_amount0",
+            "type": "u64"
+          },
+          {
+            "name": "team_treasury_amount1",
+            "type": "u64"
+          },
+          {
+            "name": "metadata",
+            "type": {
+              "defined": {
+                "name": "EventMetadata"
+              }
+            }
+          }
+        ],
         "kind": "struct"
       }
     },
@@ -4717,19 +5069,13 @@
       "type": {
         "fields": [
           {
-            "name": "debt_amount",
+            "name": "amount",
             "type": {
               "option": "u64"
             }
           },
           {
-            "name": "collateral_amount",
-            "type": {
-              "option": "u64"
-            }
-          },
-          {
-            "name": "collateral_token",
+            "name": "token_mint",
             "type": {
               "option": "pubkey"
             }
@@ -5319,6 +5665,15 @@
           },
           {
             "name": "GetBorrowLimitAndCfBpsForCollateral"
+          },
+          {
+            "name": "Reserves"
+          },
+          {
+            "name": "CashReserves"
+          },
+          {
+            "name": "SwapQuote"
           }
         ]
       }
@@ -5423,18 +5778,31 @@
       }
     },
     {
+      "docs": [
+        "Revenue recipient wallet addresses (not ATAs).",
+        "When claiming protocol fees, ATAs are derived from these wallet addresses for each token."
+      ],
       "name": "RevenueRecipients",
       "type": {
         "fields": [
           {
+            "docs": [
+              "Wallet address for futarchy/DAO treasury (e.g., multisig or DAO authority)"
+            ],
             "name": "futarchy_treasury",
             "type": "pubkey"
           },
           {
+            "docs": [
+              "Wallet address for buybacks vault"
+            ],
             "name": "buybacks_vault",
             "type": "pubkey"
           },
           {
+            "docs": [
+              "Wallet address for team treasury"
+            ],
             "name": "team_treasury",
             "type": "pubkey"
           }
@@ -5679,6 +6047,14 @@
             "type": "u64"
           },
           {
+            "name": "cash_reserve0",
+            "type": "u64"
+          },
+          {
+            "name": "cash_reserve1",
+            "type": "u64"
+          },
+          {
             "name": "token0_mint",
             "type": "pubkey"
           },
@@ -5715,11 +6091,11 @@
             "type": "pubkey"
           },
           {
-            "name": "collateral0_applied_min_cf_bps",
+            "name": "collateral0_liquidation_cf_bps",
             "type": "u16"
           },
           {
-            "name": "collateral1_applied_min_cf_bps",
+            "name": "collateral1_liquidation_cf_bps",
             "type": "u16"
           },
           {
@@ -5851,11 +6227,19 @@
             "type": "u128"
           },
           {
-            "name": "collateral0_applied_min_cf_bps",
+            "name": "collateral0_max_cf_bps",
             "type": "u16"
           },
           {
-            "name": "collateral1_applied_min_cf_bps",
+            "name": "collateral1_max_cf_bps",
+            "type": "u16"
+          },
+          {
+            "name": "collateral0_liquidation_cf_bps",
+            "type": "u16"
+          },
+          {
+            "name": "collateral1_liquidation_cf_bps",
             "type": "u16"
           },
           {
@@ -5876,13 +6260,13 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "UserBorrowingPower"
+            "name": "UserDynamicBorrowLimit"
           },
           {
-            "name": "UserAppliedCollateralFactorBps"
+            "name": "UserDynamicCollateralFactorBps"
           },
           {
-            "name": "UserLiquidationCollateralFactorBps"
+            "name": "UserLiquidationCfBps"
           },
           {
             "name": "UserDebtUtilizationBps"
@@ -5895,6 +6279,12 @@
           },
           {
             "name": "UserIsLiquidatable"
+          },
+          {
+            "name": "UserCollateralValueWithImpact"
+          },
+          {
+            "name": "UserLiquidationBorrowLimit"
           }
         ]
       }

@@ -57,10 +57,17 @@ export type ClaimProtocolFeesInstruction<
   TAccountFutarchyAuthority extends string | AccountMeta<string> = string,
   TAccountReserve0Vault extends string | AccountMeta<string> = string,
   TAccountReserve1Vault extends string | AccountMeta<string> = string,
-  TAccountAuthorityToken0Account extends string | AccountMeta<string> = string,
-  TAccountAuthorityToken1Account extends string | AccountMeta<string> = string,
   TAccountToken0Mint extends string | AccountMeta<string> = string,
   TAccountToken1Mint extends string | AccountMeta<string> = string,
+  TAccountFutarchyTreasuryToken0 extends string | AccountMeta<string> = string,
+  TAccountFutarchyTreasuryToken1 extends string | AccountMeta<string> = string,
+  TAccountFutarchyTreasury extends string | AccountMeta<string> = string,
+  TAccountBuybacksVaultToken0 extends string | AccountMeta<string> = string,
+  TAccountBuybacksVaultToken1 extends string | AccountMeta<string> = string,
+  TAccountBuybacksVault extends string | AccountMeta<string> = string,
+  TAccountTeamTreasuryToken0 extends string | AccountMeta<string> = string,
+  TAccountTeamTreasuryToken1 extends string | AccountMeta<string> = string,
+  TAccountTeamTreasury extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends string | AccountMeta<string> =
     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TAccountToken2022Program extends string | AccountMeta<string> =
@@ -93,18 +100,39 @@ export type ClaimProtocolFeesInstruction<
       TAccountReserve1Vault extends string
         ? WritableAccount<TAccountReserve1Vault>
         : TAccountReserve1Vault,
-      TAccountAuthorityToken0Account extends string
-        ? WritableAccount<TAccountAuthorityToken0Account>
-        : TAccountAuthorityToken0Account,
-      TAccountAuthorityToken1Account extends string
-        ? WritableAccount<TAccountAuthorityToken1Account>
-        : TAccountAuthorityToken1Account,
       TAccountToken0Mint extends string
         ? ReadonlyAccount<TAccountToken0Mint>
         : TAccountToken0Mint,
       TAccountToken1Mint extends string
         ? ReadonlyAccount<TAccountToken1Mint>
         : TAccountToken1Mint,
+      TAccountFutarchyTreasuryToken0 extends string
+        ? WritableAccount<TAccountFutarchyTreasuryToken0>
+        : TAccountFutarchyTreasuryToken0,
+      TAccountFutarchyTreasuryToken1 extends string
+        ? WritableAccount<TAccountFutarchyTreasuryToken1>
+        : TAccountFutarchyTreasuryToken1,
+      TAccountFutarchyTreasury extends string
+        ? ReadonlyAccount<TAccountFutarchyTreasury>
+        : TAccountFutarchyTreasury,
+      TAccountBuybacksVaultToken0 extends string
+        ? WritableAccount<TAccountBuybacksVaultToken0>
+        : TAccountBuybacksVaultToken0,
+      TAccountBuybacksVaultToken1 extends string
+        ? WritableAccount<TAccountBuybacksVaultToken1>
+        : TAccountBuybacksVaultToken1,
+      TAccountBuybacksVault extends string
+        ? ReadonlyAccount<TAccountBuybacksVault>
+        : TAccountBuybacksVault,
+      TAccountTeamTreasuryToken0 extends string
+        ? WritableAccount<TAccountTeamTreasuryToken0>
+        : TAccountTeamTreasuryToken0,
+      TAccountTeamTreasuryToken1 extends string
+        ? WritableAccount<TAccountTeamTreasuryToken1>
+        : TAccountTeamTreasuryToken1,
+      TAccountTeamTreasury extends string
+        ? ReadonlyAccount<TAccountTeamTreasury>
+        : TAccountTeamTreasury,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
         : TAccountTokenProgram,
@@ -157,10 +185,17 @@ export type ClaimProtocolFeesAsyncInput<
   TAccountFutarchyAuthority extends string = string,
   TAccountReserve0Vault extends string = string,
   TAccountReserve1Vault extends string = string,
-  TAccountAuthorityToken0Account extends string = string,
-  TAccountAuthorityToken1Account extends string = string,
   TAccountToken0Mint extends string = string,
   TAccountToken1Mint extends string = string,
+  TAccountFutarchyTreasuryToken0 extends string = string,
+  TAccountFutarchyTreasuryToken1 extends string = string,
+  TAccountFutarchyTreasury extends string = string,
+  TAccountBuybacksVaultToken0 extends string = string,
+  TAccountBuybacksVaultToken1 extends string = string,
+  TAccountBuybacksVault extends string = string,
+  TAccountTeamTreasuryToken0 extends string = string,
+  TAccountTeamTreasuryToken1 extends string = string,
+  TAccountTeamTreasury extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountToken2022Program extends string = string,
   TAccountAssociatedTokenProgram extends string = string,
@@ -173,10 +208,17 @@ export type ClaimProtocolFeesAsyncInput<
   futarchyAuthority?: Address<TAccountFutarchyAuthority>;
   reserve0Vault: Address<TAccountReserve0Vault>;
   reserve1Vault: Address<TAccountReserve1Vault>;
-  authorityToken0Account?: Address<TAccountAuthorityToken0Account>;
-  authorityToken1Account?: Address<TAccountAuthorityToken1Account>;
   token0Mint: Address<TAccountToken0Mint>;
   token1Mint: Address<TAccountToken1Mint>;
+  futarchyTreasuryToken0?: Address<TAccountFutarchyTreasuryToken0>;
+  futarchyTreasuryToken1?: Address<TAccountFutarchyTreasuryToken1>;
+  futarchyTreasury: Address<TAccountFutarchyTreasury>;
+  buybacksVaultToken0?: Address<TAccountBuybacksVaultToken0>;
+  buybacksVaultToken1?: Address<TAccountBuybacksVaultToken1>;
+  buybacksVault: Address<TAccountBuybacksVault>;
+  teamTreasuryToken0?: Address<TAccountTeamTreasuryToken0>;
+  teamTreasuryToken1?: Address<TAccountTeamTreasuryToken1>;
+  teamTreasury: Address<TAccountTeamTreasury>;
   tokenProgram?: Address<TAccountTokenProgram>;
   token2022Program?: Address<TAccountToken2022Program>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
@@ -190,10 +232,17 @@ export async function getClaimProtocolFeesInstructionAsync<
   TAccountFutarchyAuthority extends string,
   TAccountReserve0Vault extends string,
   TAccountReserve1Vault extends string,
-  TAccountAuthorityToken0Account extends string,
-  TAccountAuthorityToken1Account extends string,
   TAccountToken0Mint extends string,
   TAccountToken1Mint extends string,
+  TAccountFutarchyTreasuryToken0 extends string,
+  TAccountFutarchyTreasuryToken1 extends string,
+  TAccountFutarchyTreasury extends string,
+  TAccountBuybacksVaultToken0 extends string,
+  TAccountBuybacksVaultToken1 extends string,
+  TAccountBuybacksVault extends string,
+  TAccountTeamTreasuryToken0 extends string,
+  TAccountTeamTreasuryToken1 extends string,
+  TAccountTeamTreasury extends string,
   TAccountTokenProgram extends string,
   TAccountToken2022Program extends string,
   TAccountAssociatedTokenProgram extends string,
@@ -207,10 +256,17 @@ export async function getClaimProtocolFeesInstructionAsync<
     TAccountFutarchyAuthority,
     TAccountReserve0Vault,
     TAccountReserve1Vault,
-    TAccountAuthorityToken0Account,
-    TAccountAuthorityToken1Account,
     TAccountToken0Mint,
     TAccountToken1Mint,
+    TAccountFutarchyTreasuryToken0,
+    TAccountFutarchyTreasuryToken1,
+    TAccountFutarchyTreasury,
+    TAccountBuybacksVaultToken0,
+    TAccountBuybacksVaultToken1,
+    TAccountBuybacksVault,
+    TAccountTeamTreasuryToken0,
+    TAccountTeamTreasuryToken1,
+    TAccountTeamTreasury,
     TAccountTokenProgram,
     TAccountToken2022Program,
     TAccountAssociatedTokenProgram,
@@ -226,10 +282,17 @@ export async function getClaimProtocolFeesInstructionAsync<
     TAccountFutarchyAuthority,
     TAccountReserve0Vault,
     TAccountReserve1Vault,
-    TAccountAuthorityToken0Account,
-    TAccountAuthorityToken1Account,
     TAccountToken0Mint,
     TAccountToken1Mint,
+    TAccountFutarchyTreasuryToken0,
+    TAccountFutarchyTreasuryToken1,
+    TAccountFutarchyTreasury,
+    TAccountBuybacksVaultToken0,
+    TAccountBuybacksVaultToken1,
+    TAccountBuybacksVault,
+    TAccountTeamTreasuryToken0,
+    TAccountTeamTreasuryToken1,
+    TAccountTeamTreasury,
     TAccountTokenProgram,
     TAccountToken2022Program,
     TAccountAssociatedTokenProgram,
@@ -250,16 +313,38 @@ export async function getClaimProtocolFeesInstructionAsync<
     },
     reserve0Vault: { value: input.reserve0Vault ?? null, isWritable: true },
     reserve1Vault: { value: input.reserve1Vault ?? null, isWritable: true },
-    authorityToken0Account: {
-      value: input.authorityToken0Account ?? null,
-      isWritable: true,
-    },
-    authorityToken1Account: {
-      value: input.authorityToken1Account ?? null,
-      isWritable: true,
-    },
     token0Mint: { value: input.token0Mint ?? null, isWritable: false },
     token1Mint: { value: input.token1Mint ?? null, isWritable: false },
+    futarchyTreasuryToken0: {
+      value: input.futarchyTreasuryToken0 ?? null,
+      isWritable: true,
+    },
+    futarchyTreasuryToken1: {
+      value: input.futarchyTreasuryToken1 ?? null,
+      isWritable: true,
+    },
+    futarchyTreasury: {
+      value: input.futarchyTreasury ?? null,
+      isWritable: false,
+    },
+    buybacksVaultToken0: {
+      value: input.buybacksVaultToken0 ?? null,
+      isWritable: true,
+    },
+    buybacksVaultToken1: {
+      value: input.buybacksVaultToken1 ?? null,
+      isWritable: true,
+    },
+    buybacksVault: { value: input.buybacksVault ?? null, isWritable: false },
+    teamTreasuryToken0: {
+      value: input.teamTreasuryToken0 ?? null,
+      isWritable: true,
+    },
+    teamTreasuryToken1: {
+      value: input.teamTreasuryToken1 ?? null,
+      isWritable: true,
+    },
+    teamTreasury: { value: input.teamTreasury ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     token2022Program: {
       value: input.token2022Program ?? null,
@@ -290,13 +375,13 @@ export async function getClaimProtocolFeesInstructionAsync<
       ],
     });
   }
-  if (!accounts.authorityToken0Account.value) {
-    accounts.authorityToken0Account.value = await getProgramDerivedAddress({
+  if (!accounts.futarchyTreasuryToken0.value) {
+    accounts.futarchyTreasuryToken0.value = await getProgramDerivedAddress({
       programAddress:
         "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
       seeds: [
         getAddressEncoder().encode(
-          expectAddress(accounts.futarchyAuthority.value),
+          expectAddress(accounts.futarchyTreasury.value),
         ),
         getBytesEncoder().encode(
           new Uint8Array([
@@ -309,14 +394,82 @@ export async function getClaimProtocolFeesInstructionAsync<
       ],
     });
   }
-  if (!accounts.authorityToken1Account.value) {
-    accounts.authorityToken1Account.value = await getProgramDerivedAddress({
+  if (!accounts.futarchyTreasuryToken1.value) {
+    accounts.futarchyTreasuryToken1.value = await getProgramDerivedAddress({
       programAddress:
         "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
       seeds: [
         getAddressEncoder().encode(
-          expectAddress(accounts.futarchyAuthority.value),
+          expectAddress(accounts.futarchyTreasury.value),
         ),
+        getBytesEncoder().encode(
+          new Uint8Array([
+            6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
+            121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
+            126, 255, 0, 169,
+          ]),
+        ),
+        getAddressEncoder().encode(expectAddress(accounts.token1Mint.value)),
+      ],
+    });
+  }
+  if (!accounts.buybacksVaultToken0.value) {
+    accounts.buybacksVaultToken0.value = await getProgramDerivedAddress({
+      programAddress:
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
+      seeds: [
+        getAddressEncoder().encode(expectAddress(accounts.buybacksVault.value)),
+        getBytesEncoder().encode(
+          new Uint8Array([
+            6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
+            121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
+            126, 255, 0, 169,
+          ]),
+        ),
+        getAddressEncoder().encode(expectAddress(accounts.token0Mint.value)),
+      ],
+    });
+  }
+  if (!accounts.buybacksVaultToken1.value) {
+    accounts.buybacksVaultToken1.value = await getProgramDerivedAddress({
+      programAddress:
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
+      seeds: [
+        getAddressEncoder().encode(expectAddress(accounts.buybacksVault.value)),
+        getBytesEncoder().encode(
+          new Uint8Array([
+            6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
+            121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
+            126, 255, 0, 169,
+          ]),
+        ),
+        getAddressEncoder().encode(expectAddress(accounts.token1Mint.value)),
+      ],
+    });
+  }
+  if (!accounts.teamTreasuryToken0.value) {
+    accounts.teamTreasuryToken0.value = await getProgramDerivedAddress({
+      programAddress:
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
+      seeds: [
+        getAddressEncoder().encode(expectAddress(accounts.teamTreasury.value)),
+        getBytesEncoder().encode(
+          new Uint8Array([
+            6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
+            121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
+            126, 255, 0, 169,
+          ]),
+        ),
+        getAddressEncoder().encode(expectAddress(accounts.token0Mint.value)),
+      ],
+    });
+  }
+  if (!accounts.teamTreasuryToken1.value) {
+    accounts.teamTreasuryToken1.value = await getProgramDerivedAddress({
+      programAddress:
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
+      seeds: [
+        getAddressEncoder().encode(expectAddress(accounts.teamTreasury.value)),
         getBytesEncoder().encode(
           new Uint8Array([
             6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
@@ -354,10 +507,17 @@ export async function getClaimProtocolFeesInstructionAsync<
       getAccountMeta(accounts.futarchyAuthority),
       getAccountMeta(accounts.reserve0Vault),
       getAccountMeta(accounts.reserve1Vault),
-      getAccountMeta(accounts.authorityToken0Account),
-      getAccountMeta(accounts.authorityToken1Account),
       getAccountMeta(accounts.token0Mint),
       getAccountMeta(accounts.token1Mint),
+      getAccountMeta(accounts.futarchyTreasuryToken0),
+      getAccountMeta(accounts.futarchyTreasuryToken1),
+      getAccountMeta(accounts.futarchyTreasury),
+      getAccountMeta(accounts.buybacksVaultToken0),
+      getAccountMeta(accounts.buybacksVaultToken1),
+      getAccountMeta(accounts.buybacksVault),
+      getAccountMeta(accounts.teamTreasuryToken0),
+      getAccountMeta(accounts.teamTreasuryToken1),
+      getAccountMeta(accounts.teamTreasury),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.token2022Program),
       getAccountMeta(accounts.associatedTokenProgram),
@@ -373,10 +533,17 @@ export async function getClaimProtocolFeesInstructionAsync<
     TAccountFutarchyAuthority,
     TAccountReserve0Vault,
     TAccountReserve1Vault,
-    TAccountAuthorityToken0Account,
-    TAccountAuthorityToken1Account,
     TAccountToken0Mint,
     TAccountToken1Mint,
+    TAccountFutarchyTreasuryToken0,
+    TAccountFutarchyTreasuryToken1,
+    TAccountFutarchyTreasury,
+    TAccountBuybacksVaultToken0,
+    TAccountBuybacksVaultToken1,
+    TAccountBuybacksVault,
+    TAccountTeamTreasuryToken0,
+    TAccountTeamTreasuryToken1,
+    TAccountTeamTreasury,
     TAccountTokenProgram,
     TAccountToken2022Program,
     TAccountAssociatedTokenProgram,
@@ -391,10 +558,17 @@ export type ClaimProtocolFeesInput<
   TAccountFutarchyAuthority extends string = string,
   TAccountReserve0Vault extends string = string,
   TAccountReserve1Vault extends string = string,
-  TAccountAuthorityToken0Account extends string = string,
-  TAccountAuthorityToken1Account extends string = string,
   TAccountToken0Mint extends string = string,
   TAccountToken1Mint extends string = string,
+  TAccountFutarchyTreasuryToken0 extends string = string,
+  TAccountFutarchyTreasuryToken1 extends string = string,
+  TAccountFutarchyTreasury extends string = string,
+  TAccountBuybacksVaultToken0 extends string = string,
+  TAccountBuybacksVaultToken1 extends string = string,
+  TAccountBuybacksVault extends string = string,
+  TAccountTeamTreasuryToken0 extends string = string,
+  TAccountTeamTreasuryToken1 extends string = string,
+  TAccountTeamTreasury extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountToken2022Program extends string = string,
   TAccountAssociatedTokenProgram extends string = string,
@@ -407,10 +581,17 @@ export type ClaimProtocolFeesInput<
   futarchyAuthority: Address<TAccountFutarchyAuthority>;
   reserve0Vault: Address<TAccountReserve0Vault>;
   reserve1Vault: Address<TAccountReserve1Vault>;
-  authorityToken0Account: Address<TAccountAuthorityToken0Account>;
-  authorityToken1Account: Address<TAccountAuthorityToken1Account>;
   token0Mint: Address<TAccountToken0Mint>;
   token1Mint: Address<TAccountToken1Mint>;
+  futarchyTreasuryToken0: Address<TAccountFutarchyTreasuryToken0>;
+  futarchyTreasuryToken1: Address<TAccountFutarchyTreasuryToken1>;
+  futarchyTreasury: Address<TAccountFutarchyTreasury>;
+  buybacksVaultToken0: Address<TAccountBuybacksVaultToken0>;
+  buybacksVaultToken1: Address<TAccountBuybacksVaultToken1>;
+  buybacksVault: Address<TAccountBuybacksVault>;
+  teamTreasuryToken0: Address<TAccountTeamTreasuryToken0>;
+  teamTreasuryToken1: Address<TAccountTeamTreasuryToken1>;
+  teamTreasury: Address<TAccountTeamTreasury>;
   tokenProgram?: Address<TAccountTokenProgram>;
   token2022Program?: Address<TAccountToken2022Program>;
   associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
@@ -424,10 +605,17 @@ export function getClaimProtocolFeesInstruction<
   TAccountFutarchyAuthority extends string,
   TAccountReserve0Vault extends string,
   TAccountReserve1Vault extends string,
-  TAccountAuthorityToken0Account extends string,
-  TAccountAuthorityToken1Account extends string,
   TAccountToken0Mint extends string,
   TAccountToken1Mint extends string,
+  TAccountFutarchyTreasuryToken0 extends string,
+  TAccountFutarchyTreasuryToken1 extends string,
+  TAccountFutarchyTreasury extends string,
+  TAccountBuybacksVaultToken0 extends string,
+  TAccountBuybacksVaultToken1 extends string,
+  TAccountBuybacksVault extends string,
+  TAccountTeamTreasuryToken0 extends string,
+  TAccountTeamTreasuryToken1 extends string,
+  TAccountTeamTreasury extends string,
   TAccountTokenProgram extends string,
   TAccountToken2022Program extends string,
   TAccountAssociatedTokenProgram extends string,
@@ -441,10 +629,17 @@ export function getClaimProtocolFeesInstruction<
     TAccountFutarchyAuthority,
     TAccountReserve0Vault,
     TAccountReserve1Vault,
-    TAccountAuthorityToken0Account,
-    TAccountAuthorityToken1Account,
     TAccountToken0Mint,
     TAccountToken1Mint,
+    TAccountFutarchyTreasuryToken0,
+    TAccountFutarchyTreasuryToken1,
+    TAccountFutarchyTreasury,
+    TAccountBuybacksVaultToken0,
+    TAccountBuybacksVaultToken1,
+    TAccountBuybacksVault,
+    TAccountTeamTreasuryToken0,
+    TAccountTeamTreasuryToken1,
+    TAccountTeamTreasury,
     TAccountTokenProgram,
     TAccountToken2022Program,
     TAccountAssociatedTokenProgram,
@@ -459,10 +654,17 @@ export function getClaimProtocolFeesInstruction<
   TAccountFutarchyAuthority,
   TAccountReserve0Vault,
   TAccountReserve1Vault,
-  TAccountAuthorityToken0Account,
-  TAccountAuthorityToken1Account,
   TAccountToken0Mint,
   TAccountToken1Mint,
+  TAccountFutarchyTreasuryToken0,
+  TAccountFutarchyTreasuryToken1,
+  TAccountFutarchyTreasury,
+  TAccountBuybacksVaultToken0,
+  TAccountBuybacksVaultToken1,
+  TAccountBuybacksVault,
+  TAccountTeamTreasuryToken0,
+  TAccountTeamTreasuryToken1,
+  TAccountTeamTreasury,
   TAccountTokenProgram,
   TAccountToken2022Program,
   TAccountAssociatedTokenProgram,
@@ -482,16 +684,38 @@ export function getClaimProtocolFeesInstruction<
     },
     reserve0Vault: { value: input.reserve0Vault ?? null, isWritable: true },
     reserve1Vault: { value: input.reserve1Vault ?? null, isWritable: true },
-    authorityToken0Account: {
-      value: input.authorityToken0Account ?? null,
-      isWritable: true,
-    },
-    authorityToken1Account: {
-      value: input.authorityToken1Account ?? null,
-      isWritable: true,
-    },
     token0Mint: { value: input.token0Mint ?? null, isWritable: false },
     token1Mint: { value: input.token1Mint ?? null, isWritable: false },
+    futarchyTreasuryToken0: {
+      value: input.futarchyTreasuryToken0 ?? null,
+      isWritable: true,
+    },
+    futarchyTreasuryToken1: {
+      value: input.futarchyTreasuryToken1 ?? null,
+      isWritable: true,
+    },
+    futarchyTreasury: {
+      value: input.futarchyTreasury ?? null,
+      isWritable: false,
+    },
+    buybacksVaultToken0: {
+      value: input.buybacksVaultToken0 ?? null,
+      isWritable: true,
+    },
+    buybacksVaultToken1: {
+      value: input.buybacksVaultToken1 ?? null,
+      isWritable: true,
+    },
+    buybacksVault: { value: input.buybacksVault ?? null, isWritable: false },
+    teamTreasuryToken0: {
+      value: input.teamTreasuryToken0 ?? null,
+      isWritable: true,
+    },
+    teamTreasuryToken1: {
+      value: input.teamTreasuryToken1 ?? null,
+      isWritable: true,
+    },
+    teamTreasury: { value: input.teamTreasury ?? null, isWritable: false },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     token2022Program: {
       value: input.token2022Program ?? null,
@@ -535,10 +759,17 @@ export function getClaimProtocolFeesInstruction<
       getAccountMeta(accounts.futarchyAuthority),
       getAccountMeta(accounts.reserve0Vault),
       getAccountMeta(accounts.reserve1Vault),
-      getAccountMeta(accounts.authorityToken0Account),
-      getAccountMeta(accounts.authorityToken1Account),
       getAccountMeta(accounts.token0Mint),
       getAccountMeta(accounts.token1Mint),
+      getAccountMeta(accounts.futarchyTreasuryToken0),
+      getAccountMeta(accounts.futarchyTreasuryToken1),
+      getAccountMeta(accounts.futarchyTreasury),
+      getAccountMeta(accounts.buybacksVaultToken0),
+      getAccountMeta(accounts.buybacksVaultToken1),
+      getAccountMeta(accounts.buybacksVault),
+      getAccountMeta(accounts.teamTreasuryToken0),
+      getAccountMeta(accounts.teamTreasuryToken1),
+      getAccountMeta(accounts.teamTreasury),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.token2022Program),
       getAccountMeta(accounts.associatedTokenProgram),
@@ -554,10 +785,17 @@ export function getClaimProtocolFeesInstruction<
     TAccountFutarchyAuthority,
     TAccountReserve0Vault,
     TAccountReserve1Vault,
-    TAccountAuthorityToken0Account,
-    TAccountAuthorityToken1Account,
     TAccountToken0Mint,
     TAccountToken1Mint,
+    TAccountFutarchyTreasuryToken0,
+    TAccountFutarchyTreasuryToken1,
+    TAccountFutarchyTreasury,
+    TAccountBuybacksVaultToken0,
+    TAccountBuybacksVaultToken1,
+    TAccountBuybacksVault,
+    TAccountTeamTreasuryToken0,
+    TAccountTeamTreasuryToken1,
+    TAccountTeamTreasury,
     TAccountTokenProgram,
     TAccountToken2022Program,
     TAccountAssociatedTokenProgram,
@@ -578,14 +816,21 @@ export type ParsedClaimProtocolFeesInstruction<
     futarchyAuthority: TAccountMetas[3];
     reserve0Vault: TAccountMetas[4];
     reserve1Vault: TAccountMetas[5];
-    authorityToken0Account: TAccountMetas[6];
-    authorityToken1Account: TAccountMetas[7];
-    token0Mint: TAccountMetas[8];
-    token1Mint: TAccountMetas[9];
-    tokenProgram: TAccountMetas[10];
-    token2022Program: TAccountMetas[11];
-    associatedTokenProgram: TAccountMetas[12];
-    systemProgram: TAccountMetas[13];
+    token0Mint: TAccountMetas[6];
+    token1Mint: TAccountMetas[7];
+    futarchyTreasuryToken0: TAccountMetas[8];
+    futarchyTreasuryToken1: TAccountMetas[9];
+    futarchyTreasury: TAccountMetas[10];
+    buybacksVaultToken0: TAccountMetas[11];
+    buybacksVaultToken1: TAccountMetas[12];
+    buybacksVault: TAccountMetas[13];
+    teamTreasuryToken0: TAccountMetas[14];
+    teamTreasuryToken1: TAccountMetas[15];
+    teamTreasury: TAccountMetas[16];
+    tokenProgram: TAccountMetas[17];
+    token2022Program: TAccountMetas[18];
+    associatedTokenProgram: TAccountMetas[19];
+    systemProgram: TAccountMetas[20];
   };
   data: ClaimProtocolFeesInstructionData;
 };
@@ -598,7 +843,7 @@ export function parseClaimProtocolFeesInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedClaimProtocolFeesInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 14) {
+  if (instruction.accounts.length < 21) {
     // TODO: Coded error.
     throw new Error("Not enough accounts");
   }
@@ -617,10 +862,17 @@ export function parseClaimProtocolFeesInstruction<
       futarchyAuthority: getNextAccount(),
       reserve0Vault: getNextAccount(),
       reserve1Vault: getNextAccount(),
-      authorityToken0Account: getNextAccount(),
-      authorityToken1Account: getNextAccount(),
       token0Mint: getNextAccount(),
       token1Mint: getNextAccount(),
+      futarchyTreasuryToken0: getNextAccount(),
+      futarchyTreasuryToken1: getNextAccount(),
+      futarchyTreasury: getNextAccount(),
+      buybacksVaultToken0: getNextAccount(),
+      buybacksVaultToken1: getNextAccount(),
+      buybacksVault: getNextAccount(),
+      teamTreasuryToken0: getNextAccount(),
+      teamTreasuryToken1: getNextAccount(),
+      teamTreasury: getNextAccount(),
       tokenProgram: getNextAccount(),
       token2022Program: getNextAccount(),
       associatedTokenProgram: getNextAccount(),

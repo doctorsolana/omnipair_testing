@@ -16,13 +16,15 @@ import {
 } from "@solana/kit";
 
 export enum UserPositionViewKind {
-  UserBorrowingPower,
-  UserAppliedCollateralFactorBps,
-  UserLiquidationCollateralFactorBps,
+  UserDynamicBorrowLimit,
+  UserDynamicCollateralFactorBps,
+  UserLiquidationCfBps,
   UserDebtUtilizationBps,
   UserLiquidationPrice,
   UserDebtWithInterest,
   UserIsLiquidatable,
+  UserCollateralValueWithImpact,
+  UserLiquidationBorrowLimit,
 }
 
 export type UserPositionViewKindArgs = UserPositionViewKind;

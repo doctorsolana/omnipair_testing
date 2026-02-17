@@ -57,8 +57,8 @@ export type UserPosition = {
   discriminator: ReadonlyUint8Array;
   owner: Address;
   pair: Address;
-  collateral0AppliedMinCfBps: number;
-  collateral1AppliedMinCfBps: number;
+  collateral0LiquidationCfBps: number;
+  collateral1LiquidationCfBps: number;
   collateral0: bigint;
   collateral1: bigint;
   debt0Shares: bigint;
@@ -69,8 +69,8 @@ export type UserPosition = {
 export type UserPositionArgs = {
   owner: Address;
   pair: Address;
-  collateral0AppliedMinCfBps: number;
-  collateral1AppliedMinCfBps: number;
+  collateral0LiquidationCfBps: number;
+  collateral1LiquidationCfBps: number;
   collateral0: number | bigint;
   collateral1: number | bigint;
   debt0Shares: number | bigint;
@@ -85,8 +85,8 @@ export function getUserPositionEncoder(): FixedSizeEncoder<UserPositionArgs> {
       ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
       ["owner", getAddressEncoder()],
       ["pair", getAddressEncoder()],
-      ["collateral0AppliedMinCfBps", getU16Encoder()],
-      ["collateral1AppliedMinCfBps", getU16Encoder()],
+      ["collateral0LiquidationCfBps", getU16Encoder()],
+      ["collateral1LiquidationCfBps", getU16Encoder()],
       ["collateral0", getU64Encoder()],
       ["collateral1", getU64Encoder()],
       ["debt0Shares", getU128Encoder()],
@@ -103,8 +103,8 @@ export function getUserPositionDecoder(): FixedSizeDecoder<UserPosition> {
     ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
     ["owner", getAddressDecoder()],
     ["pair", getAddressDecoder()],
-    ["collateral0AppliedMinCfBps", getU16Decoder()],
-    ["collateral1AppliedMinCfBps", getU16Decoder()],
+    ["collateral0LiquidationCfBps", getU16Decoder()],
+    ["collateral1LiquidationCfBps", getU16Decoder()],
     ["collateral0", getU64Decoder()],
     ["collateral1", getU64Decoder()],
     ["debt0Shares", getU128Decoder()],

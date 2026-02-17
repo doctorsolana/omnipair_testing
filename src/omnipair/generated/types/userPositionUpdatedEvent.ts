@@ -36,8 +36,10 @@ export type UserPositionUpdatedEvent = {
   collateral1: bigint;
   debt0Shares: bigint;
   debt1Shares: bigint;
-  collateral0AppliedMinCfBps: number;
-  collateral1AppliedMinCfBps: number;
+  collateral0MaxCfBps: number;
+  collateral1MaxCfBps: number;
+  collateral0LiquidationCfBps: number;
+  collateral1LiquidationCfBps: number;
   metadata: EventMetadata;
 };
 
@@ -47,8 +49,10 @@ export type UserPositionUpdatedEventArgs = {
   collateral1: number | bigint;
   debt0Shares: number | bigint;
   debt1Shares: number | bigint;
-  collateral0AppliedMinCfBps: number;
-  collateral1AppliedMinCfBps: number;
+  collateral0MaxCfBps: number;
+  collateral1MaxCfBps: number;
+  collateral0LiquidationCfBps: number;
+  collateral1LiquidationCfBps: number;
   metadata: EventMetadataArgs;
 };
 
@@ -59,8 +63,10 @@ export function getUserPositionUpdatedEventEncoder(): FixedSizeEncoder<UserPosit
     ["collateral1", getU64Encoder()],
     ["debt0Shares", getU128Encoder()],
     ["debt1Shares", getU128Encoder()],
-    ["collateral0AppliedMinCfBps", getU16Encoder()],
-    ["collateral1AppliedMinCfBps", getU16Encoder()],
+    ["collateral0MaxCfBps", getU16Encoder()],
+    ["collateral1MaxCfBps", getU16Encoder()],
+    ["collateral0LiquidationCfBps", getU16Encoder()],
+    ["collateral1LiquidationCfBps", getU16Encoder()],
     ["metadata", getEventMetadataEncoder()],
   ]);
 }
@@ -72,8 +78,10 @@ export function getUserPositionUpdatedEventDecoder(): FixedSizeDecoder<UserPosit
     ["collateral1", getU64Decoder()],
     ["debt0Shares", getU128Decoder()],
     ["debt1Shares", getU128Decoder()],
-    ["collateral0AppliedMinCfBps", getU16Decoder()],
-    ["collateral1AppliedMinCfBps", getU16Decoder()],
+    ["collateral0MaxCfBps", getU16Decoder()],
+    ["collateral1MaxCfBps", getU16Decoder()],
+    ["collateral0LiquidationCfBps", getU16Decoder()],
+    ["collateral1LiquidationCfBps", getU16Decoder()],
     ["metadata", getEventMetadataDecoder()],
   ]);
 }

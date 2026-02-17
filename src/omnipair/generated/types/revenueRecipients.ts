@@ -18,9 +18,16 @@ import {
   type FixedSizeEncoder,
 } from "@solana/kit";
 
+/**
+ * Revenue recipient wallet addresses (not ATAs).
+ * When claiming protocol fees, ATAs are derived from these wallet addresses for each token.
+ */
 export type RevenueRecipients = {
+  /** Wallet address for futarchy/DAO treasury (e.g., multisig or DAO authority) */
   futarchyTreasury: Address;
+  /** Wallet address for buybacks vault */
   buybacksVault: Address;
+  /** Wallet address for team treasury */
   teamTreasury: Address;
 };
 

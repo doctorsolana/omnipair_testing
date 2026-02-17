@@ -80,16 +80,14 @@ export type ViewPairDataInstruction<
 export type ViewPairDataInstructionData = {
   discriminator: ReadonlyUint8Array;
   getter: PairViewKind;
-  debtAmount: Option<bigint>;
-  collateralAmount: Option<bigint>;
-  collateralToken: Option<Address>;
+  amount: Option<bigint>;
+  tokenMint: Option<Address>;
 };
 
 export type ViewPairDataInstructionDataArgs = {
   getter: PairViewKindArgs;
-  debtAmount: OptionOrNullable<number | bigint>;
-  collateralAmount: OptionOrNullable<number | bigint>;
-  collateralToken: OptionOrNullable<Address>;
+  amount: OptionOrNullable<number | bigint>;
+  tokenMint: OptionOrNullable<Address>;
 };
 
 export function getViewPairDataInstructionDataEncoder(): Encoder<ViewPairDataInstructionDataArgs> {
@@ -97,9 +95,8 @@ export function getViewPairDataInstructionDataEncoder(): Encoder<ViewPairDataIns
     getStructEncoder([
       ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
       ["getter", getPairViewKindEncoder()],
-      ["debtAmount", getOptionEncoder(getU64Encoder())],
-      ["collateralAmount", getOptionEncoder(getU64Encoder())],
-      ["collateralToken", getOptionEncoder(getAddressEncoder())],
+      ["amount", getOptionEncoder(getU64Encoder())],
+      ["tokenMint", getOptionEncoder(getAddressEncoder())],
     ]),
     (value) => ({ ...value, discriminator: VIEW_PAIR_DATA_DISCRIMINATOR }),
   );
@@ -109,9 +106,8 @@ export function getViewPairDataInstructionDataDecoder(): Decoder<ViewPairDataIns
   return getStructDecoder([
     ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
     ["getter", getPairViewKindDecoder()],
-    ["debtAmount", getOptionDecoder(getU64Decoder())],
-    ["collateralAmount", getOptionDecoder(getU64Decoder())],
-    ["collateralToken", getOptionDecoder(getAddressDecoder())],
+    ["amount", getOptionDecoder(getU64Decoder())],
+    ["tokenMint", getOptionDecoder(getAddressDecoder())],
   ]);
 }
 
@@ -134,9 +130,8 @@ export type ViewPairDataAsyncInput<
   rateModel: Address<TAccountRateModel>;
   futarchyAuthority?: Address<TAccountFutarchyAuthority>;
   getter: ViewPairDataInstructionDataArgs["getter"];
-  debtAmount: ViewPairDataInstructionDataArgs["debtAmount"];
-  collateralAmount: ViewPairDataInstructionDataArgs["collateralAmount"];
-  collateralToken: ViewPairDataInstructionDataArgs["collateralToken"];
+  amount: ViewPairDataInstructionDataArgs["amount"];
+  tokenMint: ViewPairDataInstructionDataArgs["tokenMint"];
 };
 
 export async function getViewPairDataInstructionAsync<
@@ -222,9 +217,8 @@ export type ViewPairDataInput<
   rateModel: Address<TAccountRateModel>;
   futarchyAuthority: Address<TAccountFutarchyAuthority>;
   getter: ViewPairDataInstructionDataArgs["getter"];
-  debtAmount: ViewPairDataInstructionDataArgs["debtAmount"];
-  collateralAmount: ViewPairDataInstructionDataArgs["collateralAmount"];
-  collateralToken: ViewPairDataInstructionDataArgs["collateralToken"];
+  amount: ViewPairDataInstructionDataArgs["amount"];
+  tokenMint: ViewPairDataInstructionDataArgs["tokenMint"];
 };
 
 export function getViewPairDataInstruction<

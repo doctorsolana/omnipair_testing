@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import { useConnector } from '@solana/connector'
-import bs58 from 'bs58'
 import {
   getAddressEncoder,
   getBytesEncoder,
@@ -13,12 +12,15 @@ import PoolDetail from './PoolDetail'
 import NewPool from './NewPool'
 import PositionJournal from './components/positions/PositionJournal'
 import LiquidityHeatmap from './components/debug/LiquidityHeatmap'
+import { fetchPoolsForHeatmap, type IndexerPoolListItem } from './lib/indexerClient'
 import {
   getBorrowInstructionAsync,
   getPairDecoder,
   getSwapInstructionAsync,
   getUserPositionDecoder,
   OMNIPAIR_PROGRAM_ID,
+  PAIR_DISCRIMINATOR_B58,
+  POSITION_SEED_PREFIX,
   type Pair,
   type UserPosition,
 } from './omnipair'
@@ -38,12 +40,6 @@ type ProgramAccountWithData = {
   account: {
     data: [string, string] | string
   }
-}
-
-type AccountInfoResult = {
-  value: {
-    data: [string, string] | string
-  } | null
 }
 
 type SignatureResult = {
@@ -185,6 +181,34 @@ function TokenSelect({
   )
 }
 
+type PoolLogoProps = {
+  className: string
+  logoUrl: string | null
+  fallback: string
+  alt: string
+}
+
+function PoolLogo({ className, logoUrl, fallback, alt }: PoolLogoProps) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const showImage = Boolean(logoUrl) && !imageFailed
+
+  return (
+    <span className={className}>
+      {showImage ? (
+        <img
+          src={logoUrl ?? ''}
+          alt={alt}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        fallback
+      )}
+    </span>
+  )
+}
+
 type PoolView = {
   address: string
   lpMint: string
@@ -192,6 +216,8 @@ type PoolView = {
   token1Ticker: string
   token0Mint: string
   token1Mint: string
+  token0LogoUrl: string | null
+  token1LogoUrl: string | null
   token0Decimals: number
   token1Decimals: number
   rateModel: string
@@ -224,21 +250,36 @@ type RpcTokenAccountsResult = {
   }>
 }
 
-type RpcTokenBalanceResult = {
-  value: {
-    uiAmount: number | null
-    uiAmountString: string
-  }
+type RpcParsedTokenAccountsResult = {
+  value: Array<{
+    account?: {
+      data?: {
+        parsed?: {
+          info?: {
+            mint?: string
+            tokenAmount?: {
+              uiAmount?: number | null
+              uiAmountString?: string
+            }
+          }
+        }
+      }
+    }
+  }>
 }
 
-const PAIR_DISCRIMINATOR_B58 = bs58.encode(
-  Uint8Array.from([85, 72, 49, 176, 182, 228, 141, 82]),
-)
+type RpcMultipleAccountInfoResult = {
+  value: Array<
+    | {
+        data: [string, string] | string
+      }
+    | null
+  >
+}
+
 const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
+const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
 const ASSOCIATED_TOKEN_PROGRAM_ID = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
-const GAMM_POSITION_SEED = new Uint8Array([
-  103, 97, 109, 109, 95, 112, 111, 115, 105, 116, 105, 111, 110,
-])
 
 type LoanPositionView = {
   poolAddress: string
@@ -265,6 +306,15 @@ const KNOWN_TOKENS: Record<string, TokenInfo> = {
   mSoLzYCxHdYgdzU9h5c5fW6jJ9ZgWfM8f8B6Vh9tzrV: { symbol: 'mSOL', name: 'Marinade SOL' },
   jupSoLaJ53Uo89f9Jg7p8hGQ4w2FJv8r1v9h7QpJUP: { symbol: 'JUP', name: 'Jupiter' },
   DezXAZ8z7PnrnRJjz3wXBoRgixCa6rPggD4R4D9x7GfP: { symbol: 'BONK', name: 'Bonk' },
+}
+
+const KNOWN_TOKEN_LOGOS: Record<string, string> = {
+  So11111111111111111111111111111111111111112:
+    'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v:
+    'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
+  Es9vMFrzaCERmJfrF4H2FYD4J9sMZ5vZ6n9Y9w4tY9f:
+    'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4J9sMZ5vZ6n9Y9w4tY9f/logo.png',
 }
 
 function shortAddress(value: string) {
@@ -347,7 +397,40 @@ function getTokenColor(seed: string) {
   return palette[Math.abs(hash) % palette.length]
 }
 
-function mapPairToPoolView(address: string, pair: Pair): PoolView {
+function normalizeTokenLogoUrl(value?: string | null) {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed.length) return null
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return null
+  return trimmed
+}
+
+function getIndexerTokenLogoMap(indexerPools: IndexerPoolListItem[]) {
+  const iconMap: Record<string, string> = {}
+  for (const pool of indexerPools) {
+    const token0Address = pool.token0?.address
+    const token1Address = pool.token1?.address
+    const token0Icon = normalizeTokenLogoUrl(pool.token0?.icon)
+    const token1Icon = normalizeTokenLogoUrl(pool.token1?.icon)
+    if (token0Address && token0Icon && !iconMap[token0Address]) {
+      iconMap[token0Address] = token0Icon
+    }
+    if (token1Address && token1Icon && !iconMap[token1Address]) {
+      iconMap[token1Address] = token1Icon
+    }
+  }
+  return iconMap
+}
+
+function resolveTokenLogo(mint: string, tokenLogoMap: Record<string, string>) {
+  return tokenLogoMap[mint] ?? KNOWN_TOKEN_LOGOS[mint] ?? null
+}
+
+function mapPairToPoolView(
+  address: string,
+  pair: Pair,
+  tokenLogoMap: Record<string, string> = {},
+): PoolView {
   const token0 = getTokenInfo(pair.token0)
   const token1 = getTokenInfo(pair.token1)
   const token0Ticker = toTicker(token0.symbol)
@@ -372,6 +455,8 @@ function mapPairToPoolView(address: string, pair: Pair): PoolView {
     token1Ticker,
     token0Mint: pair.token0,
     token1Mint: pair.token1,
+    token0LogoUrl: resolveTokenLogo(pair.token0, tokenLogoMap),
+    token1LogoUrl: resolveTokenLogo(pair.token1, tokenLogoMap),
     token0Decimals: pair.token0Decimals,
     token1Decimals: pair.token1Decimals,
     rateModel: pair.rateModel,
@@ -546,16 +631,22 @@ function App() {
 
   const rpcRequest = useCallback(
     async <T,>(method: string, params: unknown[] = []) => {
-      const response = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: Date.now(),
-          method,
-          params,
-        }),
-      })
+      let response: Response
+      try {
+        response = await fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method,
+            params,
+          }),
+        })
+      } catch (fetchError) {
+        const message = fetchError instanceof Error ? fetchError.message : 'Failed to fetch'
+        throw new Error(`RPC network error: ${message}`)
+      }
 
       if (!response.ok) throw new Error(`RPC request failed: ${response.status}`)
       const json = (await response.json()) as { result?: T; error?: { message?: string } }
@@ -581,7 +672,7 @@ function App() {
     return getProgramDerivedAddress({
       programAddress: OMNIPAIR_PROGRAM_ID as Address,
       seeds: [
-        getBytesEncoder().encode(GAMM_POSITION_SEED),
+        getBytesEncoder().encode(POSITION_SEED_PREFIX),
         getAddressEncoder().encode(pairAddress as Address),
         getAddressEncoder().encode(owner as Address),
       ],
@@ -600,39 +691,31 @@ function App() {
     [rpcRequest],
   )
 
-  const getTokenAccountBalance = useCallback(
-    async (tokenAccount: string | null) => {
-      if (!tokenAccount) return 0
-      const result = await rpcRequest<RpcTokenBalanceResult>('getTokenAccountBalance', [
-        tokenAccount,
-        { commitment: 'confirmed' },
-      ])
-      return result.value.uiAmount ?? 0
-    },
-    [rpcRequest],
-  )
-
   const loadPools = useCallback(async () => {
     setPoolsLoading(true)
     setPoolsError(null)
     try {
-      const accounts = await rpcRequest<ProgramAccountWithData[]>('getProgramAccounts', [
-        OMNIPAIR_PROGRAM_ID,
-        {
-          encoding: 'base64',
-          commitment: 'confirmed',
-          filters: [{ memcmp: { offset: 0, bytes: PAIR_DISCRIMINATOR_B58 } }],
-        },
+      const [accounts, indexerPools] = await Promise.all([
+        rpcRequest<ProgramAccountWithData[]>('getProgramAccounts', [
+          OMNIPAIR_PROGRAM_ID,
+          {
+            encoding: 'base64',
+            commitment: 'confirmed',
+            filters: [{ memcmp: { offset: 0, bytes: PAIR_DISCRIMINATOR_B58 } }],
+          },
+        ]),
+        fetchPoolsForHeatmap().catch(() => []),
       ])
 
       const decoder = getPairDecoder()
+      const tokenLogoMap = getIndexerTokenLogoMap(indexerPools)
       const decodedPools = accounts
         .map((accountItem) => {
           const encodedData = accountItem.account.data
           const base64Data = Array.isArray(encodedData) ? encodedData[0] : encodedData
           if (typeof base64Data !== 'string') throw new Error('Invalid account data encoding')
           const pair = decoder.decode(base64ToBytes(base64Data))
-          return mapPairToPoolView(accountItem.pubkey, pair)
+          return mapPairToPoolView(accountItem.pubkey, pair, tokenLogoMap)
         })
         .sort((a, b) => b.utilizationPct - a.utilizationPct)
 
@@ -665,62 +748,102 @@ function App() {
 
     try {
       const decoder = getUserPositionDecoder()
-      const entries = await Promise.all(
-        pools.map(async (pool) => {
-          const [positionAddress] = await findUserPositionAddress(pool.address, account)
-          const accountInfo = await rpcRequest<AccountInfoResult>('getAccountInfo', [
-            positionAddress,
-            { encoding: 'base64', commitment: 'confirmed' },
+      const [positionAddresses, tokenBalancesByMint] = await Promise.all([
+        Promise.all(
+          pools.map(async (pool) => {
+            const [positionAddress] = await findUserPositionAddress(pool.address, account)
+            return String(positionAddress)
+          }),
+        ),
+        (async () => {
+          const [tokenkegAccounts, token2022Accounts] = await Promise.all([
+            rpcRequest<RpcParsedTokenAccountsResult>('getTokenAccountsByOwner', [
+              account,
+              { programId: TOKEN_PROGRAM_ID },
+              { commitment: 'confirmed', encoding: 'jsonParsed' },
+            ]),
+            rpcRequest<RpcParsedTokenAccountsResult>('getTokenAccountsByOwner', [
+              account,
+              { programId: TOKEN_2022_PROGRAM_ID },
+              { commitment: 'confirmed', encoding: 'jsonParsed' },
+            ]).catch(() => ({ value: [] })),
           ])
 
-          let loanPosition: LoanPositionView | null = null
-
-          if (accountInfo.value) {
-            const encodedData = accountInfo.value.data
-            const base64Data = Array.isArray(encodedData) ? encodedData[0] : encodedData
-            if (typeof base64Data !== 'string') throw new Error('Invalid account data encoding')
-            const userPosition = decoder.decode(base64ToBytes(base64Data)) as UserPosition
-
-            const collateral0 = toDisplayNumber(userPosition.collateral0, pool.token0Decimals)
-            const collateral1 = toDisplayNumber(userPosition.collateral1, pool.token1Decimals)
-            const debt0 = toDisplayNumber(
-              applyDebtFromShares(userPosition.debt0Shares, pool.totalDebt0, pool.totalDebt0Shares),
-              pool.token0Decimals,
-            )
-            const debt1 = toDisplayNumber(
-              applyDebtFromShares(userPosition.debt1Shares, pool.totalDebt1, pool.totalDebt1Shares),
-              pool.token1Decimals,
-            )
-
-            if (collateral0 > 0 || collateral1 > 0 || debt0 > 0 || debt1 > 0) {
-              loanPosition = {
-                poolAddress: pool.address,
-                symbol: pool.symbol,
-                collateral0,
-                collateral1,
-                debt0,
-                debt1,
-                cf0: userPosition.collateral0AppliedMinCfBps,
-                cf1: userPosition.collateral1AppliedMinCfBps,
-              }
-            }
+          const balanceByMint = new Map<string, number>()
+          const allAccounts = [...tokenkegAccounts.value, ...token2022Accounts.value]
+          for (const tokenAccount of allAccounts) {
+            const info = tokenAccount.account?.data?.parsed?.info
+            const mint = info?.mint
+            if (!mint) continue
+            const amount =
+              info.tokenAmount?.uiAmount ??
+              Number(info.tokenAmount?.uiAmountString ?? '0')
+            if (!Number.isFinite(amount) || amount <= 0) continue
+            balanceByMint.set(mint, (balanceByMint.get(mint) ?? 0) + amount)
           }
+          return balanceByMint
+        })(),
+      ])
 
-          const lpTokenAccount = await getOwnedTokenAccount(account, pool.lpMint)
-          const lpBalance = await getTokenAccountBalance(lpTokenAccount)
-          const lpPosition: LpPositionView | null =
-            lpBalance > 0
-              ? {
+      const positionInfos = await rpcRequest<RpcMultipleAccountInfoResult>('getMultipleAccounts', [
+        positionAddresses,
+        { encoding: 'base64', commitment: 'confirmed' },
+      ])
+
+      const entries = pools.map((pool, index) => {
+        let loanPosition: LoanPositionView | null = null
+        const accountInfo = positionInfos.value[index]
+
+        if (accountInfo?.data) {
+          const encodedData = accountInfo.data
+          const base64Data = Array.isArray(encodedData) ? encodedData[0] : encodedData
+
+          if (typeof base64Data === 'string') {
+            try {
+              const userPosition = decoder.decode(base64ToBytes(base64Data)) as UserPosition
+
+              const collateral0 = toDisplayNumber(userPosition.collateral0, pool.token0Decimals)
+              const collateral1 = toDisplayNumber(userPosition.collateral1, pool.token1Decimals)
+              const debt0 = toDisplayNumber(
+                applyDebtFromShares(userPosition.debt0Shares, pool.totalDebt0, pool.totalDebt0Shares),
+                pool.token0Decimals,
+              )
+              const debt1 = toDisplayNumber(
+                applyDebtFromShares(userPosition.debt1Shares, pool.totalDebt1, pool.totalDebt1Shares),
+                pool.token1Decimals,
+              )
+
+              if (collateral0 > 0 || collateral1 > 0 || debt0 > 0 || debt1 > 0) {
+                loanPosition = {
                   poolAddress: pool.address,
                   symbol: pool.symbol,
-                  lpBalance,
-                  lpBalanceLabel: formatCompact(lpBalance, 4),
+                  collateral0,
+                  collateral1,
+                  debt0,
+                  debt1,
+                  cf0: userPosition.collateral0LiquidationCfBps,
+                  cf1: userPosition.collateral1LiquidationCfBps,
                 }
-              : null
+              }
+            } catch {
+              loanPosition = null
+            }
+          }
+        }
 
-          return { loanPosition, lpPosition }
-        }),
-      )
+        const lpBalance = tokenBalancesByMint.get(pool.lpMint) ?? 0
+        const lpPosition: LpPositionView | null =
+          lpBalance > 0
+            ? {
+                poolAddress: pool.address,
+                symbol: pool.symbol,
+                lpBalance,
+                lpBalanceLabel: formatCompact(lpBalance, 4),
+              }
+            : null
+
+        return { loanPosition, lpPosition }
+      })
 
       setLoanPositions(
         entries
@@ -740,8 +863,6 @@ function App() {
   }, [
     account,
     findUserPositionAddress,
-    getOwnedTokenAccount,
-    getTokenAccountBalance,
     isConnected,
     pools,
     rpcRequest,
@@ -1092,10 +1213,18 @@ function App() {
                       >
                         <div className="pool-pair">
                           <div className="pool-logo-stack">
-                            <span className="pool-logo">{pool.token0Ticker.slice(0, 1)}</span>
-                            <span className="pool-logo pool-logo-secondary">
-                              {pool.token1Ticker.slice(0, 1)}
-                            </span>
+                            <PoolLogo
+                              className="pool-logo"
+                              logoUrl={pool.token0LogoUrl}
+                              fallback={pool.token0Ticker.slice(0, 1)}
+                              alt={`${pool.token0Ticker} logo`}
+                            />
+                            <PoolLogo
+                              className="pool-logo pool-logo-secondary"
+                              logoUrl={pool.token1LogoUrl}
+                              fallback={pool.token1Ticker.slice(0, 1)}
+                              alt={`${pool.token1Ticker} logo`}
+                            />
                           </div>
                           <div className="pool-pair-line">{pool.symbol}</div>
                         </div>

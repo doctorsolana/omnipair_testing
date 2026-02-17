@@ -30,7 +30,8 @@ export type IndexerPoolToken = {
 
 export type IndexerPoolListItem = {
   id?: number
-  pair_address: string
+  pair_address?: string
+  pairAddress?: string
   token0?: IndexerPoolToken
   token1?: IndexerPoolToken
   reserves?: {
@@ -112,12 +113,16 @@ export type IndexerSwap = {
 export type IndexerPosition = {
   signer?: string
   pair?: string
+  pairAddress?: string
   position?: string
   collateralToken?: 'token0' | 'token1' | string
   debtToken?: 'token0' | 'token1' | string
   collateral?: string | number
   debtShares?: string | number
   debtWithInterest?: string | number
+  health?: {
+    debtWithInterest?: string | number
+  }
   event_timestamp?: string
 }
 
@@ -267,10 +272,17 @@ async function getIndexerData<T>(
   }
 
   const requestPromise = (async () => {
-    const response = await fetch(url, {
-      headers: { accept: 'application/json' },
-      signal: options?.signal,
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        headers: { accept: 'application/json' },
+        signal: options?.signal,
+      })
+    } catch (fetchError) {
+      const message =
+        fetchError instanceof Error ? fetchError.message : 'Unable to reach indexer API'
+      throw new Error(`Indexer network error: ${message} (${url})`)
+    }
 
     if (!response.ok) {
       const text = await response.text()
@@ -442,7 +454,9 @@ export async function fetchPoolRisk(
 
   for (const position of positions) {
     const collateralValue = toNumber(position.collateral)
-    const debtValue = toNumber(position.debtWithInterest ?? position.debtShares)
+    const debtValue = toNumber(
+      position.debtWithInterest ?? position.health?.debtWithInterest ?? position.debtShares,
+    )
 
     if (position.collateralToken === 'token1') {
       collateral1 += collateralValue
@@ -601,6 +615,7 @@ export async function fetchWalletJournal(
 
   for (const position of positionsData.positions ?? []) {
     if (position.pair) poolSet.add(position.pair)
+    if (position.pairAddress) poolSet.add(position.pairAddress)
   }
   for (const swap of swapsData.swaps ?? []) {
     if (swap.pair) poolSet.add(swap.pair)
@@ -660,7 +675,7 @@ export async function fetchPoolsForHeatmap(options?: FetchOptions) {
 
 export function buildHeatmap(pools: IndexerPoolListItem[]): HeatmapResult {
   const pointsBase = pools
-    .filter((pool) => Boolean(pool.pair_address))
+    .filter((pool) => Boolean(pool.pair_address || pool.pairAddress))
     .map((pool) => {
       const reserve0 = toNumber(pool.reserves?.token0)
       const reserve1 = toNumber(pool.reserves?.token1)
@@ -670,7 +685,7 @@ export function buildHeatmap(pools: IndexerPoolListItem[]): HeatmapResult {
       const token1Symbol = pool.token1?.symbol || pool.token1?.address?.slice(0, 4) || 'T1'
 
       return {
-        poolAddress: pool.pair_address,
+        poolAddress: pool.pair_address || pool.pairAddress || '',
         symbol: `${token0Symbol}/${token1Symbol}`,
         token0Symbol,
         token1Symbol,

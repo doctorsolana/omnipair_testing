@@ -60,16 +60,11 @@ export type SwapInstruction<
   TAccountUserTokenOutAccount extends string | AccountMeta<string> = string,
   TAccountTokenInMint extends string | AccountMeta<string> = string,
   TAccountTokenOutMint extends string | AccountMeta<string> = string,
-  TAccountAuthorityTokenInAccount extends string | AccountMeta<string> = string,
   TAccountUser extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends string | AccountMeta<string> =
     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TAccountToken2022Program extends string | AccountMeta<string> =
     "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-  TAccountAssociatedTokenProgram extends string | AccountMeta<string> =
-    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-  TAccountSystemProgram extends string | AccountMeta<string> =
-    "11111111111111111111111111111111",
   TAccountEventAuthority extends string | AccountMeta<string> = string,
   TAccountProgram extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
@@ -104,9 +99,6 @@ export type SwapInstruction<
       TAccountTokenOutMint extends string
         ? ReadonlyAccount<TAccountTokenOutMint>
         : TAccountTokenOutMint,
-      TAccountAuthorityTokenInAccount extends string
-        ? WritableAccount<TAccountAuthorityTokenInAccount>
-        : TAccountAuthorityTokenInAccount,
       TAccountUser extends string
         ? WritableSignerAccount<TAccountUser> & AccountSignerMeta<TAccountUser>
         : TAccountUser,
@@ -116,12 +108,6 @@ export type SwapInstruction<
       TAccountToken2022Program extends string
         ? ReadonlyAccount<TAccountToken2022Program>
         : TAccountToken2022Program,
-      TAccountAssociatedTokenProgram extends string
-        ? ReadonlyAccount<TAccountAssociatedTokenProgram>
-        : TAccountAssociatedTokenProgram,
-      TAccountSystemProgram extends string
-        ? ReadonlyAccount<TAccountSystemProgram>
-        : TAccountSystemProgram,
       TAccountEventAuthority extends string
         ? ReadonlyAccount<TAccountEventAuthority>
         : TAccountEventAuthority,
@@ -182,12 +168,9 @@ export type SwapAsyncInput<
   TAccountUserTokenOutAccount extends string = string,
   TAccountTokenInMint extends string = string,
   TAccountTokenOutMint extends string = string,
-  TAccountAuthorityTokenInAccount extends string = string,
   TAccountUser extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountToken2022Program extends string = string,
-  TAccountAssociatedTokenProgram extends string = string,
-  TAccountSystemProgram extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -200,12 +183,9 @@ export type SwapAsyncInput<
   userTokenOutAccount: Address<TAccountUserTokenOutAccount>;
   tokenInMint: Address<TAccountTokenInMint>;
   tokenOutMint: Address<TAccountTokenOutMint>;
-  authorityTokenInAccount?: Address<TAccountAuthorityTokenInAccount>;
   user: TransactionSigner<TAccountUser>;
   tokenProgram?: Address<TAccountTokenProgram>;
   token2022Program?: Address<TAccountToken2022Program>;
-  associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
-  systemProgram?: Address<TAccountSystemProgram>;
   eventAuthority?: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   amountIn: SwapInstructionDataArgs["amountIn"];
@@ -222,12 +202,9 @@ export async function getSwapInstructionAsync<
   TAccountUserTokenOutAccount extends string,
   TAccountTokenInMint extends string,
   TAccountTokenOutMint extends string,
-  TAccountAuthorityTokenInAccount extends string,
   TAccountUser extends string,
   TAccountTokenProgram extends string,
   TAccountToken2022Program extends string,
-  TAccountAssociatedTokenProgram extends string,
-  TAccountSystemProgram extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof OMNIPAIR_PROGRAM_ADDRESS,
@@ -242,12 +219,9 @@ export async function getSwapInstructionAsync<
     TAccountUserTokenOutAccount,
     TAccountTokenInMint,
     TAccountTokenOutMint,
-    TAccountAuthorityTokenInAccount,
     TAccountUser,
     TAccountTokenProgram,
     TAccountToken2022Program,
-    TAccountAssociatedTokenProgram,
-    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -264,12 +238,9 @@ export async function getSwapInstructionAsync<
     TAccountUserTokenOutAccount,
     TAccountTokenInMint,
     TAccountTokenOutMint,
-    TAccountAuthorityTokenInAccount,
     TAccountUser,
     TAccountTokenProgram,
     TAccountToken2022Program,
-    TAccountAssociatedTokenProgram,
-    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >
@@ -297,21 +268,12 @@ export async function getSwapInstructionAsync<
     },
     tokenInMint: { value: input.tokenInMint ?? null, isWritable: false },
     tokenOutMint: { value: input.tokenOutMint ?? null, isWritable: false },
-    authorityTokenInAccount: {
-      value: input.authorityTokenInAccount ?? null,
-      isWritable: true,
-    },
     user: { value: input.user ?? null, isWritable: true },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     token2022Program: {
       value: input.token2022Program ?? null,
       isWritable: false,
     },
-    associatedTokenProgram: {
-      value: input.associatedTokenProgram ?? null,
-      isWritable: false,
-    },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -365,25 +327,6 @@ export async function getSwapInstructionAsync<
       ],
     });
   }
-  if (!accounts.authorityTokenInAccount.value) {
-    accounts.authorityTokenInAccount.value = await getProgramDerivedAddress({
-      programAddress:
-        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">,
-      seeds: [
-        getAddressEncoder().encode(
-          expectAddress(accounts.futarchyAuthority.value),
-        ),
-        getBytesEncoder().encode(
-          new Uint8Array([
-            6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235,
-            121, 172, 28, 180, 133, 237, 95, 91, 55, 145, 58, 140, 245, 133,
-            126, 255, 0, 169,
-          ]),
-        ),
-        getAddressEncoder().encode(expectAddress(accounts.tokenInMint.value)),
-      ],
-    });
-  }
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
@@ -391,14 +334,6 @@ export async function getSwapInstructionAsync<
   if (!accounts.token2022Program.value) {
     accounts.token2022Program.value =
       "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address<"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb">;
-  }
-  if (!accounts.associatedTokenProgram.value) {
-    accounts.associatedTokenProgram.value =
-      "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
-  }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
   }
   if (!accounts.eventAuthority.value) {
     accounts.eventAuthority.value = await getProgramDerivedAddress({
@@ -426,12 +361,9 @@ export async function getSwapInstructionAsync<
       getAccountMeta(accounts.userTokenOutAccount),
       getAccountMeta(accounts.tokenInMint),
       getAccountMeta(accounts.tokenOutMint),
-      getAccountMeta(accounts.authorityTokenInAccount),
       getAccountMeta(accounts.user),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.token2022Program),
-      getAccountMeta(accounts.associatedTokenProgram),
-      getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -450,12 +382,9 @@ export async function getSwapInstructionAsync<
     TAccountUserTokenOutAccount,
     TAccountTokenInMint,
     TAccountTokenOutMint,
-    TAccountAuthorityTokenInAccount,
     TAccountUser,
     TAccountTokenProgram,
     TAccountToken2022Program,
-    TAccountAssociatedTokenProgram,
-    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >);
@@ -471,12 +400,9 @@ export type SwapInput<
   TAccountUserTokenOutAccount extends string = string,
   TAccountTokenInMint extends string = string,
   TAccountTokenOutMint extends string = string,
-  TAccountAuthorityTokenInAccount extends string = string,
   TAccountUser extends string = string,
   TAccountTokenProgram extends string = string,
   TAccountToken2022Program extends string = string,
-  TAccountAssociatedTokenProgram extends string = string,
-  TAccountSystemProgram extends string = string,
   TAccountEventAuthority extends string = string,
   TAccountProgram extends string = string,
 > = {
@@ -489,12 +415,9 @@ export type SwapInput<
   userTokenOutAccount: Address<TAccountUserTokenOutAccount>;
   tokenInMint: Address<TAccountTokenInMint>;
   tokenOutMint: Address<TAccountTokenOutMint>;
-  authorityTokenInAccount: Address<TAccountAuthorityTokenInAccount>;
   user: TransactionSigner<TAccountUser>;
   tokenProgram?: Address<TAccountTokenProgram>;
   token2022Program?: Address<TAccountToken2022Program>;
-  associatedTokenProgram?: Address<TAccountAssociatedTokenProgram>;
-  systemProgram?: Address<TAccountSystemProgram>;
   eventAuthority: Address<TAccountEventAuthority>;
   program: Address<TAccountProgram>;
   amountIn: SwapInstructionDataArgs["amountIn"];
@@ -511,12 +434,9 @@ export function getSwapInstruction<
   TAccountUserTokenOutAccount extends string,
   TAccountTokenInMint extends string,
   TAccountTokenOutMint extends string,
-  TAccountAuthorityTokenInAccount extends string,
   TAccountUser extends string,
   TAccountTokenProgram extends string,
   TAccountToken2022Program extends string,
-  TAccountAssociatedTokenProgram extends string,
-  TAccountSystemProgram extends string,
   TAccountEventAuthority extends string,
   TAccountProgram extends string,
   TProgramAddress extends Address = typeof OMNIPAIR_PROGRAM_ADDRESS,
@@ -531,12 +451,9 @@ export function getSwapInstruction<
     TAccountUserTokenOutAccount,
     TAccountTokenInMint,
     TAccountTokenOutMint,
-    TAccountAuthorityTokenInAccount,
     TAccountUser,
     TAccountTokenProgram,
     TAccountToken2022Program,
-    TAccountAssociatedTokenProgram,
-    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >,
@@ -552,12 +469,9 @@ export function getSwapInstruction<
   TAccountUserTokenOutAccount,
   TAccountTokenInMint,
   TAccountTokenOutMint,
-  TAccountAuthorityTokenInAccount,
   TAccountUser,
   TAccountTokenProgram,
   TAccountToken2022Program,
-  TAccountAssociatedTokenProgram,
-  TAccountSystemProgram,
   TAccountEventAuthority,
   TAccountProgram
 > {
@@ -584,21 +498,12 @@ export function getSwapInstruction<
     },
     tokenInMint: { value: input.tokenInMint ?? null, isWritable: false },
     tokenOutMint: { value: input.tokenOutMint ?? null, isWritable: false },
-    authorityTokenInAccount: {
-      value: input.authorityTokenInAccount ?? null,
-      isWritable: true,
-    },
     user: { value: input.user ?? null, isWritable: true },
     tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
     token2022Program: {
       value: input.token2022Program ?? null,
       isWritable: false,
     },
-    associatedTokenProgram: {
-      value: input.associatedTokenProgram ?? null,
-      isWritable: false,
-    },
-    systemProgram: { value: input.systemProgram ?? null, isWritable: false },
     eventAuthority: { value: input.eventAuthority ?? null, isWritable: false },
     program: { value: input.program ?? null, isWritable: false },
   };
@@ -619,14 +524,6 @@ export function getSwapInstruction<
     accounts.token2022Program.value =
       "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address<"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb">;
   }
-  if (!accounts.associatedTokenProgram.value) {
-    accounts.associatedTokenProgram.value =
-      "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address<"ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL">;
-  }
-  if (!accounts.systemProgram.value) {
-    accounts.systemProgram.value =
-      "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
-  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
@@ -640,12 +537,9 @@ export function getSwapInstruction<
       getAccountMeta(accounts.userTokenOutAccount),
       getAccountMeta(accounts.tokenInMint),
       getAccountMeta(accounts.tokenOutMint),
-      getAccountMeta(accounts.authorityTokenInAccount),
       getAccountMeta(accounts.user),
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.token2022Program),
-      getAccountMeta(accounts.associatedTokenProgram),
-      getAccountMeta(accounts.systemProgram),
       getAccountMeta(accounts.eventAuthority),
       getAccountMeta(accounts.program),
     ],
@@ -664,12 +558,9 @@ export function getSwapInstruction<
     TAccountUserTokenOutAccount,
     TAccountTokenInMint,
     TAccountTokenOutMint,
-    TAccountAuthorityTokenInAccount,
     TAccountUser,
     TAccountTokenProgram,
     TAccountToken2022Program,
-    TAccountAssociatedTokenProgram,
-    TAccountSystemProgram,
     TAccountEventAuthority,
     TAccountProgram
   >);
@@ -690,14 +581,11 @@ export type ParsedSwapInstruction<
     userTokenOutAccount: TAccountMetas[6];
     tokenInMint: TAccountMetas[7];
     tokenOutMint: TAccountMetas[8];
-    authorityTokenInAccount: TAccountMetas[9];
-    user: TAccountMetas[10];
-    tokenProgram: TAccountMetas[11];
-    token2022Program: TAccountMetas[12];
-    associatedTokenProgram: TAccountMetas[13];
-    systemProgram: TAccountMetas[14];
-    eventAuthority: TAccountMetas[15];
-    program: TAccountMetas[16];
+    user: TAccountMetas[9];
+    tokenProgram: TAccountMetas[10];
+    token2022Program: TAccountMetas[11];
+    eventAuthority: TAccountMetas[12];
+    program: TAccountMetas[13];
   };
   data: SwapInstructionData;
 };
@@ -710,7 +598,7 @@ export function parseSwapInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedSwapInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 17) {
+  if (instruction.accounts.length < 14) {
     // TODO: Coded error.
     throw new Error("Not enough accounts");
   }
@@ -732,12 +620,9 @@ export function parseSwapInstruction<
       userTokenOutAccount: getNextAccount(),
       tokenInMint: getNextAccount(),
       tokenOutMint: getNextAccount(),
-      authorityTokenInAccount: getNextAccount(),
       user: getNextAccount(),
       tokenProgram: getNextAccount(),
       token2022Program: getNextAccount(),
-      associatedTokenProgram: getNextAccount(),
-      systemProgram: getNextAccount(),
       eventAuthority: getNextAccount(),
       program: getNextAccount(),
     },
