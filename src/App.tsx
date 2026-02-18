@@ -79,6 +79,16 @@ type TokenSelectProps = {
   ariaLabel: string
 }
 
+type PoolSelectOption = {
+  address: string
+  symbol: string
+  name: string
+  token0Ticker: string
+  token1Ticker: string
+  token0LogoUrl: string | null
+  token1LogoUrl: string | null
+}
+
 function TokenSelect({
   id,
   value,
@@ -206,6 +216,132 @@ function PoolLogo({ className, logoUrl, fallback, alt }: PoolLogoProps) {
         fallback
       )}
     </span>
+  )
+}
+
+type PoolSelectProps = {
+  id?: string
+  value: string
+  options: PoolSelectOption[]
+  onChange: (value: string) => void
+  disabled?: boolean
+  ariaLabel: string
+}
+
+function PoolSelect({
+  id,
+  value,
+  options,
+  onChange,
+  disabled = false,
+  ariaLabel,
+}: PoolSelectProps) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const selected = options.find((pool) => pool.address === value) ?? options[0] ?? null
+
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (target && containerRef.current?.contains(target)) return
+      setOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (disabled && open) setOpen(false)
+  }, [disabled, open])
+
+  useEffect(() => {
+    if (!options.length && open) setOpen(false)
+  }, [open, options.length])
+
+  return (
+    <div
+      ref={containerRef}
+      className={`token-select pool-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''}`}
+    >
+      <button
+        id={id}
+        type="button"
+        className="token-select-trigger pool-select-trigger"
+        onClick={() => {
+          if (disabled || !options.length) return
+          setOpen((current) => !current)
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        disabled={disabled}
+      >
+        <span className="pool-logo-stack pool-select-logos" aria-hidden>
+          <PoolLogo
+            className="pool-logo"
+            logoUrl={selected?.token0LogoUrl ?? null}
+            fallback={selected?.token0Ticker.slice(0, 1) ?? 'T'}
+            alt={`${selected?.token0Ticker ?? 'Token'} logo`}
+          />
+          <PoolLogo
+            className="pool-logo pool-logo-secondary"
+            logoUrl={selected?.token1LogoUrl ?? null}
+            fallback={selected?.token1Ticker.slice(0, 1) ?? 'K'}
+            alt={`${selected?.token1Ticker ?? 'Token'} logo`}
+          />
+        </span>
+        <span className="trade-token-label pool-select-label">
+          {selected?.symbol ?? 'Select Pool'}
+        </span>
+        <span className="token-select-caret" aria-hidden>
+          ▾
+        </span>
+      </button>
+
+      {open && (
+        <div className="token-select-menu pool-select-menu" role="listbox" aria-label={ariaLabel}>
+          {options.map((pool) => (
+            <button
+              key={pool.address}
+              type="button"
+              role="option"
+              aria-selected={pool.address === selected?.address}
+              className={`token-select-option pool-select-option ${
+                pool.address === selected?.address ? 'active' : ''
+              }`}
+              onClick={() => {
+                onChange(pool.address)
+                setOpen(false)
+              }}
+            >
+              <span className="pool-logo-stack pool-select-logos" aria-hidden>
+                <PoolLogo
+                  className="pool-logo"
+                  logoUrl={pool.token0LogoUrl}
+                  fallback={pool.token0Ticker.slice(0, 1)}
+                  alt={`${pool.token0Ticker} logo`}
+                />
+                <PoolLogo
+                  className="pool-logo pool-logo-secondary"
+                  logoUrl={pool.token1LogoUrl}
+                  fallback={pool.token1Ticker.slice(0, 1)}
+                  alt={`${pool.token1Ticker} logo`}
+                />
+              </span>
+              <span className="token-option-text">
+                <span className="token-option-main">{pool.symbol}</span>
+                <span className="token-option-sub">{pool.name}</span>
+              </span>
+            </button>
+          ))}
+          {!options.length && <div className="token-select-empty">No pools available</div>}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -628,6 +764,18 @@ function App() {
       DEFAULT_TRADE_TOKEN,
     [borrowToken, borrowTokenOptions],
   )
+
+  const poolSelectOptions = useMemo<PoolSelectOption[]>(() => {
+    return pools.map((pool) => ({
+      address: pool.address,
+      symbol: pool.symbol,
+      name: pool.name,
+      token0Ticker: pool.token0Ticker,
+      token1Ticker: pool.token1Ticker,
+      token0LogoUrl: pool.token0LogoUrl,
+      token1LogoUrl: pool.token1LogoUrl,
+    }))
+  }, [pools])
 
   const rpcRequest = useCallback(
     async <T,>(method: string, params: unknown[] = []) => {
@@ -1336,21 +1484,16 @@ function App() {
                     <div className="status-block">Load pools to enable borrowing.</div>
                   )}
 
-                  <div className="borrow-top">
+                  <div className="trade-field">
                     <label htmlFor="borrow-pool">Pool</label>
-                    <select
+                    <PoolSelect
                       id="borrow-pool"
-                      className="borrow-pool-select"
                       value={borrowPool}
-                      onChange={(event) => setBorrowPool(event.target.value)}
+                      options={poolSelectOptions}
+                      onChange={(value) => setBorrowPool(value)}
+                      ariaLabel="Select pool"
                       disabled={!pools.length}
-                    >
-                      {pools.map((pool) => (
-                        <option key={pool.address} value={pool.address}>
-                          {pool.symbol}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
 
                   {selectedBorrowPool?.statusLabel === 'Reduce-only' && (

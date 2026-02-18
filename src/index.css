@@ -1158,6 +1158,70 @@ button {
   color: #7a88b0;
 }
 
+.token-select.pool-select {
+  position: relative;
+  right: auto;
+  top: auto;
+  transform: none;
+  width: 100%;
+}
+
+.token-select-trigger.pool-select-trigger {
+  width: 100%;
+  justify-content: space-between;
+  padding: 10px 14px 10px 10px;
+  border-radius: 18px 20px 16px 14px / 14px 18px 20px 16px;
+  background: #fbfcff;
+  border-color: rgba(206, 219, 248, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 16px rgba(108, 134, 190, 0.18);
+}
+
+.token-select-trigger.pool-select-trigger:hover {
+  transform: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 14px 18px rgba(108, 134, 190, 0.2);
+}
+
+.pool-select-logos {
+  width: 40px;
+  height: 26px;
+}
+
+.pool-select-logos .pool-logo {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+}
+
+.pool-select-logos .pool-logo-secondary {
+  left: 14px;
+}
+
+.trade-token-label.pool-select-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 13px;
+  color: #2f3964;
+}
+
+.token-select-menu.pool-select-menu {
+  left: 0;
+  right: 0;
+  min-width: 0;
+  width: 100%;
+  max-height: 320px;
+  overflow: auto;
+  transform-origin: top;
+}
+
+.token-select-option.pool-select-option {
+  grid-template-columns: 40px 1fr;
+}
+
 @keyframes tokenMenuIn {
   from {
     opacity: 0;
@@ -1204,13 +1268,6 @@ button {
 }
 
 .borrow-card {
-  gap: 12px;
-}
-
-.borrow-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
@@ -1279,30 +1336,6 @@ button {
   color: #5a6aa5;
   background: #eef3ff;
   box-shadow: inset 0 0 0 1px rgba(185, 203, 239, 0.9);
-}
-
-.borrow-top label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #6f7fae;
-}
-
-.borrow-pool-select {
-  appearance: none;
-  border: 1px solid rgba(211, 223, 249, 0.95);
-  background: #f5f8ff;
-  color: #4f5f94;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 26px 6px 10px;
-  border-radius: 999px;
-  position: relative;
-}
-
-.borrow-pool-select:focus {
-  outline: none;
-  border-color: rgba(122, 164, 236, 0.9);
-  box-shadow: 0 0 0 3px rgba(143, 179, 240, 0.22);
 }
 
 @keyframes tradeSwitchFloat {
@@ -2577,6 +2610,9 @@ button {
   background: #f7f9ff;
   border: 1px solid rgba(203, 214, 240, 0.6);
   font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .status-block.error {
