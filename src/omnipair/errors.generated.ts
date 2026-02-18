@@ -1,0 +1,88 @@
+// This file is AUTO-GENERATED. Do not edit by hand.
+// Regenerate via: node scripts/gen-omnipair-error-map.mjs
+
+export type OmnipairIdlError = {
+  code: number
+  name: string
+  msg: string
+}
+
+export const OMNIPAIR_IDL_ERRORS: Record<number, OmnipairIdlError> = {
+  6000: { code: 6000, name: "InvalidDeployer", msg: "Invalid deployer" },
+  6001: { code: 6001, name: "ArgumentMissing", msg: "Argument missing" },
+  6002: { code: 6002, name: "InvalidSwapFeeBps", msg: "Invalid swap fee bps" },
+  6003: { code: 6003, name: "InvalidInterestFeeBps", msg: "Invalid interest fee bps" },
+  6004: { code: 6004, name: "InvalidHalfLife", msg: "Invalid half life" },
+  6005: { code: 6005, name: "InvalidFutarchyAuthority", msg: "Invalid futarchy authority" },
+  6006: { code: 6006, name: "InvalidArgument", msg: "Invalid argument" },
+  6007: { code: 6007, name: "AmountZero", msg: "Amount cannot be zero" },
+  6008: { code: 6008, name: "InsufficientAmount0In", msg: "Insufficient amount0 in" },
+  6009: { code: 6009, name: "InsufficientAmount1In", msg: "Insufficient amount1 in" },
+  6010: { code: 6010, name: "BorrowingPowerExceeded", msg: "Borrowing power exceeded" },
+  6011: { code: 6011, name: "InvalidTokenAccount", msg: "Invalid token account" },
+  6012: { code: 6012, name: "InvalidTokenProgram", msg: "Invalid token program" },
+  6013: { code: 6013, name: "BorrowExceedsReserve", msg: "Borrow exceeds reserve" },
+  6014: { code: 6014, name: "InsufficientAmount0", msg: "Insufficient amount0" },
+  6015: { code: 6015, name: "InsufficientAmount1", msg: "Insufficient amount1" },
+  6016: { code: 6016, name: "InsufficientOutputAmount", msg: "Insufficient output amount" },
+  6017: { code: 6017, name: "SlippageExceeded", msg: "Output amount below minimum requested (slippage exceeded)" },
+  6018: { code: 6018, name: "InsufficientLiquidity", msg: "Insufficient liquidity" },
+  6019: { code: 6019, name: "InsufficientCashReserve0", msg: "Insufficient cash reserve0" },
+  6020: { code: 6020, name: "InsufficientCashReserve1", msg: "Insufficient cash reserve1" },
+  6021: { code: 6021, name: "Overflow", msg: "Arithmetic overflow" },
+  6022: { code: 6022, name: "Undercollateralized", msg: "Undercollateralized" },
+  6023: { code: 6023, name: "InsufficientBalanceForCollateral", msg: "Insufficient balance for collateral" },
+  6024: { code: 6024, name: "InsufficientAmount", msg: "Insufficient amount" },
+  6025: { code: 6025, name: "InsufficientBalance", msg: "User balance insufficient to cover requested amount" },
+  6026: { code: 6026, name: "InsufficientDebt", msg: "Insufficient debt" },
+  6027: { code: 6027, name: "UserPositionNotInitialized", msg: "User position not initialized" },
+  6028: { code: 6028, name: "ZeroDebtAmount", msg: "Zero debt amount" },
+  6029: { code: 6029, name: "NotUndercollateralized", msg: "Not undercollateralized" },
+  6030: { code: 6030, name: "BrokenInvariant", msg: "Broken invariant" },
+  6031: { code: 6031, name: "InvariantOverflow", msg: "Math overflow during invariant calculation" },
+  6032: { code: 6032, name: "FeeMathOverflow", msg: "Math overflow during fee calculation." },
+  6033: { code: 6033, name: "OutputAmountOverflow", msg: "Math overflow during output amount calculation." },
+  6034: { code: 6034, name: "ReserveOverflow", msg: "Math overflow during reserve calculation." },
+  6035: { code: 6035, name: "ReserveUnderflow", msg: "Math underflow during reserve calculation." },
+  6036: { code: 6036, name: "CashReserveUnderflow", msg: "Math underflow during cash reserve calculation." },
+  6037: { code: 6037, name: "DenominatorOverflow", msg: "Math overflow during denominator calculation." },
+  6038: { code: 6038, name: "LiquidityMathOverflow", msg: "Math overflow during liquidity calculation" },
+  6039: { code: 6039, name: "LiquiditySqrtOverflow", msg: "Math overflow during liquidity square root calculation" },
+  6040: { code: 6040, name: "LiquidityUnderflow", msg: "Math underflow during liquidity calculation" },
+  6041: { code: 6041, name: "LiquidityConversionOverflow", msg: "Math overflow during liquidity conversion" },
+  6042: { code: 6042, name: "SupplyOverflow", msg: "Math overflow during supply calculation" },
+  6043: { code: 6043, name: "SupplyUnderflow", msg: "Math underflow during supply calculation" },
+  6044: { code: 6044, name: "DebtMathOverflow", msg: "Math overflow during debt calculation" },
+  6045: { code: 6045, name: "DebtShareMathOverflow", msg: "Math overflow during debt share calculation" },
+  6046: { code: 6046, name: "DebtShareDivisionOverflow", msg: "Math overflow during debt share division" },
+  6047: { code: 6047, name: "DebtUtilizationOverflow", msg: "Math overflow during debt utilization calculation" },
+  6048: { code: 6048, name: "InvalidMint", msg: "Invalid mint" },
+  6049: { code: 6049, name: "InvalidMintLen", msg: "Invalid mint length" },
+  6050: { code: 6050, name: "InvalidDistribution", msg: "Invalid distribution - percentages must sum to 100%" },
+  6051: { code: 6051, name: "InvalidLpMintKey", msg: "Invalid LP mint key" },
+  6052: { code: 6052, name: "InvalidLpName", msg: "Invalid LP name" },
+  6053: { code: 6053, name: "InvalidLpSymbol", msg: "Invalid LP symbol" },
+  6054: { code: 6054, name: "InvalidLpUri", msg: "Invalid LP URI" },
+  6055: { code: 6055, name: "AccountNotEmpty", msg: "Account not empty" },
+  6056: { code: 6056, name: "InvalidMintAuthority", msg: "Invalid mint authority" },
+  6057: { code: 6057, name: "FrozenLpMint", msg: "Frozen LP mint" },
+  6058: { code: 6058, name: "NonZeroSupply", msg: "Non-zero supply" },
+  6059: { code: 6059, name: "WrongLpDecimals", msg: "Wrong LP decimals" },
+  6060: { code: 6060, name: "InvalidVaultSameAccount", msg: "Invalid vault - token_in_vault and token_out_vault must be different" },
+  6061: { code: 6061, name: "InvalidVault", msg: "Invalid vault" },
+  6062: { code: 6062, name: "InvalidParamsHash", msg: "Invalid params hash - hash does not match computed parameters" },
+  6063: { code: 6063, name: "InvalidVersion", msg: "Invalid version" },
+  6064: { code: 6064, name: "InvalidTokenOrder", msg: "Invalid token order" },
+  6065: { code: 6065, name: "InvalidRateModel", msg: "Invalid rate model - rate_model does not match pair.rate_model" },
+  6066: { code: 6066, name: "InvalidPair", msg: "Invalid pair - pair does not match user_position.pair" },
+  6067: { code: 6067, name: "InvalidUtilBounds", msg: "Invalid utilization bounds - must satisfy: MIN <= start < end <= MAX" },
+  6068: { code: 6068, name: "InvalidRateParams", msg: "Invalid rate parameters - check half_life_ms, min_rate_bps, max_rate_bps, initial_rate_bps bounds" },
+  6069: { code: 6069, name: "ReduceOnlyMode", msg: "Operation blocked: reduce-only mode is active" },
+  6070: { code: 6070, name: "ReduceOnlyHasDebt", msg: "Cannot remove collateral in reduce-only mode while debt exists" },
+  6071: { code: 6071, name: "InvalidRecipient", msg: "Invalid recipient - address does not match configured revenue recipient" },
+}
+
+export function getOmnipairIdlError(code: number): OmnipairIdlError | null {
+  return OMNIPAIR_IDL_ERRORS[code] ?? null
+}
+

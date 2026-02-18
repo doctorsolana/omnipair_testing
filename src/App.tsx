@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { useConnector } from '@solana/connector'
 import {
   getAddressEncoder,
@@ -10,12 +10,18 @@ import {
 import { ConnectWallet } from './solana/ConnectWallet'
 import PoolDetail from './PoolDetail'
 import NewPool from './NewPool'
-import PositionJournal from './components/positions/PositionJournal'
-import LiquidityHeatmap from './components/debug/LiquidityHeatmap'
-import { fetchPoolsForHeatmap, type IndexerPoolListItem } from './lib/indexerClient'
+import PoolsTab from './components/tabs/PoolsTab'
+import TradeTab from './components/tabs/TradeTab'
+import BorrowTab from './components/tabs/BorrowTab'
+import PositionsTab from './components/tabs/PositionsTab'
+import DebugTab from './components/tabs/DebugTab'
+import { fetchPoolsForHeatmap } from './lib/indexerClient'
+import { formatActionError, formatSimulationError } from './lib/simulationError'
 import {
+  getAddCollateralInstructionAsync,
   getBorrowInstructionAsync,
   getPairDecoder,
+  getRepayInstructionAsync,
   getSwapInstructionAsync,
   getUserPositionDecoder,
   OMNIPAIR_PROGRAM_ID,
@@ -26,358 +32,37 @@ import {
 } from './omnipair'
 import { useRpc } from './solana/useRpc'
 import { useSendSmartTransaction } from './solana/useSendSmartTransaction'
-
-type AppTab = 'Pools' | 'Trade' | 'Borrow' | 'Positions' | 'Debug'
-
-const APP_TABS: AppTab[] = ['Pools', 'Trade', 'Borrow', 'Positions', 'Debug']
-
-type ProgramAccountResult = {
-  pubkey: string
-}
+import {
+  APP_TABS,
+  type BorrowHealthSnapshot,
+  DEFAULT_TRADE_TOKEN,
+  type AppTab,
+  type LoanPositionView,
+  type LpPositionView,
+  type PoolSelectOption,
+  type PoolView,
+  type ProgramAccountResult,
+  type SignatureResult,
+  type TradeTokenOption,
+} from './features/market/types'
+import {
+  applyDebtFromShares,
+  base64ToBytes,
+  computeBorrowHealthSnapshot,
+  formatCompact,
+  getIndexerTokenLogoMap,
+  getTokenColor,
+  mapPairToPoolView,
+  shortAddress,
+  toBaseUnits,
+  toDisplayNumber,
+} from './features/market/utils'
 
 type ProgramAccountWithData = {
   pubkey: string
   account: {
     data: [string, string] | string
   }
-}
-
-type SignatureResult = {
-  signature: string
-  slot: number
-  err: unknown
-  blockTime: number | null
-}
-
-type TokenInfo = {
-  symbol: string
-  name: string
-}
-
-type TradeTokenOption = {
-  mint: string
-  ticker: string
-  name: string
-  logo: string
-  color: string
-}
-
-const DEFAULT_TRADE_TOKEN: TradeTokenOption = {
-  mint: '',
-  ticker: 'TOKN',
-  name: 'Token',
-  logo: 'T',
-  color: 'linear-gradient(135deg, #9db8e4, #6f90c5)',
-}
-
-type TokenSelectProps = {
-  id?: string
-  value: string
-  options: TradeTokenOption[]
-  onChange: (value: string) => void
-  disabled?: boolean
-  ariaLabel: string
-}
-
-type PoolSelectOption = {
-  address: string
-  symbol: string
-  name: string
-  token0Ticker: string
-  token1Ticker: string
-  token0LogoUrl: string | null
-  token1LogoUrl: string | null
-}
-
-function TokenSelect({
-  id,
-  value,
-  options,
-  onChange,
-  disabled = false,
-  ariaLabel,
-}: TokenSelectProps) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const selected =
-    options.find((token) => token.mint === value) ??
-    options[0] ??
-    DEFAULT_TRADE_TOKEN
-
-  useEffect(() => {
-    if (!open) return
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null
-      if (target && containerRef.current?.contains(target)) return
-      setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (disabled && open) setOpen(false)
-  }, [disabled, open])
-
-  useEffect(() => {
-    if (!options.length && open) setOpen(false)
-  }, [open, options.length])
-
-  return (
-    <div
-      ref={containerRef}
-      className={`token-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''}`}
-    >
-      <button
-        id={id}
-        type="button"
-        className="token-select-trigger"
-        onClick={() => {
-          if (disabled || !options.length) return
-          setOpen((current) => !current)
-        }}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={ariaLabel}
-        disabled={disabled}
-      >
-        <span
-          className="trade-token-logo"
-          style={{ background: selected.color }}
-          aria-hidden
-        >
-          {selected.logo}
-        </span>
-        <span className="trade-token-label">{selected.ticker}</span>
-        <span className="token-select-caret" aria-hidden>
-          ▾
-        </span>
-      </button>
-
-      {open && (
-        <div className="token-select-menu" role="listbox" aria-label={ariaLabel}>
-          {options.map((token) => (
-            <button
-              key={token.mint}
-              type="button"
-              role="option"
-              aria-selected={token.mint === selected.mint}
-              className={`token-select-option ${token.mint === selected.mint ? 'active' : ''}`}
-              onClick={() => {
-                onChange(token.mint)
-                setOpen(false)
-              }}
-            >
-              <span
-                className="trade-token-logo"
-                style={{ background: token.color }}
-                aria-hidden
-              >
-                {token.logo}
-              </span>
-              <span className="token-option-text">
-                <span className="token-option-main">{token.ticker}</span>
-                <span className="token-option-sub">{token.name}</span>
-              </span>
-            </button>
-          ))}
-          {!options.length && <div className="token-select-empty">No tokens available</div>}
-        </div>
-      )}
-    </div>
-  )
-}
-
-type PoolLogoProps = {
-  className: string
-  logoUrl: string | null
-  fallback: string
-  alt: string
-}
-
-function PoolLogo({ className, logoUrl, fallback, alt }: PoolLogoProps) {
-  const [imageFailed, setImageFailed] = useState(false)
-  const showImage = Boolean(logoUrl) && !imageFailed
-
-  return (
-    <span className={className}>
-      {showImage ? (
-        <img
-          src={logoUrl ?? ''}
-          alt={alt}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        fallback
-      )}
-    </span>
-  )
-}
-
-type PoolSelectProps = {
-  id?: string
-  value: string
-  options: PoolSelectOption[]
-  onChange: (value: string) => void
-  disabled?: boolean
-  ariaLabel: string
-}
-
-function PoolSelect({
-  id,
-  value,
-  options,
-  onChange,
-  disabled = false,
-  ariaLabel,
-}: PoolSelectProps) {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const selected = options.find((pool) => pool.address === value) ?? options[0] ?? null
-
-  useEffect(() => {
-    if (!open) return
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null
-      if (target && containerRef.current?.contains(target)) return
-      setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-    }
-  }, [open])
-
-  useEffect(() => {
-    if (disabled && open) setOpen(false)
-  }, [disabled, open])
-
-  useEffect(() => {
-    if (!options.length && open) setOpen(false)
-  }, [open, options.length])
-
-  return (
-    <div
-      ref={containerRef}
-      className={`token-select pool-select ${open ? 'open' : ''} ${disabled ? 'disabled' : ''}`}
-    >
-      <button
-        id={id}
-        type="button"
-        className="token-select-trigger pool-select-trigger"
-        onClick={() => {
-          if (disabled || !options.length) return
-          setOpen((current) => !current)
-        }}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={ariaLabel}
-        disabled={disabled}
-      >
-        <span className="pool-logo-stack pool-select-logos" aria-hidden>
-          <PoolLogo
-            className="pool-logo"
-            logoUrl={selected?.token0LogoUrl ?? null}
-            fallback={selected?.token0Ticker.slice(0, 1) ?? 'T'}
-            alt={`${selected?.token0Ticker ?? 'Token'} logo`}
-          />
-          <PoolLogo
-            className="pool-logo pool-logo-secondary"
-            logoUrl={selected?.token1LogoUrl ?? null}
-            fallback={selected?.token1Ticker.slice(0, 1) ?? 'K'}
-            alt={`${selected?.token1Ticker ?? 'Token'} logo`}
-          />
-        </span>
-        <span className="trade-token-label pool-select-label">
-          {selected?.symbol ?? 'Select Pool'}
-        </span>
-        <span className="token-select-caret" aria-hidden>
-          ▾
-        </span>
-      </button>
-
-      {open && (
-        <div className="token-select-menu pool-select-menu" role="listbox" aria-label={ariaLabel}>
-          {options.map((pool) => (
-            <button
-              key={pool.address}
-              type="button"
-              role="option"
-              aria-selected={pool.address === selected?.address}
-              className={`token-select-option pool-select-option ${
-                pool.address === selected?.address ? 'active' : ''
-              }`}
-              onClick={() => {
-                onChange(pool.address)
-                setOpen(false)
-              }}
-            >
-              <span className="pool-logo-stack pool-select-logos" aria-hidden>
-                <PoolLogo
-                  className="pool-logo"
-                  logoUrl={pool.token0LogoUrl}
-                  fallback={pool.token0Ticker.slice(0, 1)}
-                  alt={`${pool.token0Ticker} logo`}
-                />
-                <PoolLogo
-                  className="pool-logo pool-logo-secondary"
-                  logoUrl={pool.token1LogoUrl}
-                  fallback={pool.token1Ticker.slice(0, 1)}
-                  alt={`${pool.token1Ticker} logo`}
-                />
-              </span>
-              <span className="token-option-text">
-                <span className="token-option-main">{pool.symbol}</span>
-                <span className="token-option-sub">{pool.name}</span>
-              </span>
-            </button>
-          ))}
-          {!options.length && <div className="token-select-empty">No pools available</div>}
-        </div>
-      )}
-    </div>
-  )
-}
-
-type PoolView = {
-  address: string
-  lpMint: string
-  token0Ticker: string
-  token1Ticker: string
-  token0Mint: string
-  token1Mint: string
-  token0LogoUrl: string | null
-  token1LogoUrl: string | null
-  token0Decimals: number
-  token1Decimals: number
-  rateModel: string
-  fixedCfBps: number | null
-  price: number
-  totalDebt0: bigint
-  totalDebt1: bigint
-  totalDebt0Shares: bigint
-  totalDebt1Shares: bigint
-  totalCollateral0: bigint
-  totalCollateral1: bigint
-  cashReserve0: bigint
-  cashReserve1: bigint
-  symbol: string
-  name: string
-  priceLabel: string
-  priceSubLabel: string
-  utilizationPct: number
-  utilizationLabel: string
-  feeLabel: string
-  reserveLabel: string
-  reserveTooltip: string
-  statusLabel: 'Active' | 'Reduce-only'
-  trend: 'up' | 'down'
 }
 
 type RpcTokenAccountsResult = {
@@ -417,217 +102,16 @@ const TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 const TOKEN_2022_PROGRAM_ID = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'
 const ASSOCIATED_TOKEN_PROGRAM_ID = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'
 
-type LoanPositionView = {
-  poolAddress: string
-  symbol: string
-  collateral0: number
-  collateral1: number
-  debt0: number
-  debt1: number
-  cf0: number | null
-  cf1: number | null
-}
-
-type LpPositionView = {
-  poolAddress: string
-  symbol: string
-  lpBalance: number
-  lpBalanceLabel: string
-}
-
-const KNOWN_TOKENS: Record<string, TokenInfo> = {
-  So11111111111111111111111111111111111111112: { symbol: 'SOL', name: 'Solana' },
-  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: 'USDC', name: 'USD Coin' },
-  Es9vMFrzaCERmJfrF4H2FYD4J9sMZ5vZ6n9Y9w4tY9f: { symbol: 'USDT', name: 'Tether' },
-  mSoLzYCxHdYgdzU9h5c5fW6jJ9ZgWfM8f8B6Vh9tzrV: { symbol: 'mSOL', name: 'Marinade SOL' },
-  jupSoLaJ53Uo89f9Jg7p8hGQ4w2FJv8r1v9h7QpJUP: { symbol: 'JUP', name: 'Jupiter' },
-  DezXAZ8z7PnrnRJjz3wXBoRgixCa6rPggD4R4D9x7GfP: { symbol: 'BONK', name: 'Bonk' },
-}
-
-const KNOWN_TOKEN_LOGOS: Record<string, string> = {
-  So11111111111111111111111111111111111111112:
-    'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
-  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v:
-    'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png',
-  Es9vMFrzaCERmJfrF4H2FYD4J9sMZ5vZ6n9Y9w4tY9f:
-    'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4J9sMZ5vZ6n9Y9w4tY9f/logo.png',
-}
-
-function shortAddress(value: string) {
-  if (value.length < 12) return value
-  return `${value.slice(0, 4)}…${value.slice(-4)}`
-}
-
-function getTokenInfo(mint: string): TokenInfo {
-  return KNOWN_TOKENS[mint] ?? { symbol: mint.slice(0, 4).toUpperCase(), name: shortAddress(mint) }
-}
-
-function base64ToBytes(base64: string) {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i)
-  }
-  return bytes
-}
-
-function toDisplayNumber(amount: bigint, decimals: number) {
-  return Number(amount) / 10 ** decimals
-}
-
-function formatCompact(value: number, maximumFractionDigits = 2) {
-  if (!Number.isFinite(value)) return '--'
-  return new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits,
-  }).format(value)
-}
-
-function formatPercent(value: number) {
-  if (!Number.isFinite(value)) return '--'
-  return `${value.toFixed(1)}%`
-}
-
-function toBaseUnits(amount: string, decimals: number): bigint | null {
-  const normalized = amount.trim()
-  if (!/^(?:\d+|\d*\.\d+)$/.test(normalized)) return null
-
-  const [wholePart, fractionalPart = ''] = normalized.split('.')
-  const whole = wholePart.length ? BigInt(wholePart) : 0n
-  const fraction = fractionalPart.slice(0, decimals).padEnd(decimals, '0')
-  const fractional = fraction.length ? BigInt(fraction) : 0n
-  return whole * 10n ** BigInt(decimals) + fractional
-}
-
-function toTicker(symbol: string) {
-  const cleaned = symbol.replace(/[^a-z0-9]/gi, '').toUpperCase()
-  if (cleaned.length >= 4) return cleaned.slice(0, 4)
-  return symbol.slice(0, 4).toUpperCase()
-}
-
-function unwrapOption<T>(value: unknown): T | null {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'object' && value && '__option' in value) {
-    const optionValue = value as { __option: 'Some' | 'None'; value?: T }
-    if (optionValue.__option === 'Some') return optionValue.value ?? null
-    return null
-  }
-  return value as T
-}
-
-function applyDebtFromShares(userShares: bigint, totalDebt: bigint, totalShares: bigint) {
-  if (totalShares === 0n) return 0n
-  return (userShares * totalDebt) / totalShares
-}
-
-function getTokenColor(seed: string) {
-  const palette = [
-    'linear-gradient(135deg, #70d4ff, #4f8ce8)',
-    'linear-gradient(135deg, #ffc57a, #f0a24f)',
-    'linear-gradient(135deg, #b5c5dc, #8397b8)',
-    'linear-gradient(135deg, #86b9ff, #618de1)',
-    'linear-gradient(135deg, #8ec8ad, #5a9d7f)',
-  ]
-  let hash = 0
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) | 0
-  return palette[Math.abs(hash) % palette.length]
-}
-
-function normalizeTokenLogoUrl(value?: string | null) {
-  if (!value) return null
-  const trimmed = value.trim()
-  if (!trimmed.length) return null
-  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) return null
-  return trimmed
-}
-
-function getIndexerTokenLogoMap(indexerPools: IndexerPoolListItem[]) {
-  const iconMap: Record<string, string> = {}
-  for (const pool of indexerPools) {
-    const token0Address = pool.token0?.address
-    const token1Address = pool.token1?.address
-    const token0Icon = normalizeTokenLogoUrl(pool.token0?.icon)
-    const token1Icon = normalizeTokenLogoUrl(pool.token1?.icon)
-    if (token0Address && token0Icon && !iconMap[token0Address]) {
-      iconMap[token0Address] = token0Icon
-    }
-    if (token1Address && token1Icon && !iconMap[token1Address]) {
-      iconMap[token1Address] = token1Icon
-    }
-  }
-  return iconMap
-}
-
-function resolveTokenLogo(mint: string, tokenLogoMap: Record<string, string>) {
-  return tokenLogoMap[mint] ?? KNOWN_TOKEN_LOGOS[mint] ?? null
-}
-
-function mapPairToPoolView(
-  address: string,
-  pair: Pair,
-  tokenLogoMap: Record<string, string> = {},
-): PoolView {
-  const token0 = getTokenInfo(pair.token0)
-  const token1 = getTokenInfo(pair.token1)
-  const token0Ticker = toTicker(token0.symbol)
-  const token1Ticker = toTicker(token1.symbol)
-
-  const reserve0 = toDisplayNumber(pair.reserve0, pair.token0Decimals)
-  const reserve1 = toDisplayNumber(pair.reserve1, pair.token1Decimals)
-  const debt0 = toDisplayNumber(pair.totalDebt0, pair.token0Decimals)
-  const debt1 = toDisplayNumber(pair.totalDebt1, pair.token1Decimals)
-
-  const utilization0 = reserve0 > 0 ? (debt0 / reserve0) * 100 : 0
-  const utilization1 = reserve1 > 0 ? (debt1 / reserve1) * 100 : 0
-  const utilization = Math.max(utilization0, utilization1)
-
-  const price = reserve0 > 0 && reserve1 > 0 ? reserve1 / reserve0 : NaN
-  const pricePrecision = !Number.isFinite(price) ? 0 : price >= 100 ? 2 : price >= 1 ? 3 : 5
-
-  return {
-    address,
-    lpMint: pair.lpMint,
-    token0Ticker,
-    token1Ticker,
-    token0Mint: pair.token0,
-    token1Mint: pair.token1,
-    token0LogoUrl: resolveTokenLogo(pair.token0, tokenLogoMap),
-    token1LogoUrl: resolveTokenLogo(pair.token1, tokenLogoMap),
-    token0Decimals: pair.token0Decimals,
-    token1Decimals: pair.token1Decimals,
-    rateModel: pair.rateModel,
-    fixedCfBps: unwrapOption<number>(pair.fixedCfBps),
-    price,
-    totalDebt0: pair.totalDebt0,
-    totalDebt1: pair.totalDebt1,
-    totalDebt0Shares: pair.totalDebt0Shares,
-    totalDebt1Shares: pair.totalDebt1Shares,
-    totalCollateral0: pair.totalCollateral0,
-    totalCollateral1: pair.totalCollateral1,
-    cashReserve0: pair.cashReserve0,
-    cashReserve1: pair.cashReserve1,
-    symbol: `${token0Ticker}/${token1Ticker}`,
-    name: `${token0.name} / ${token1.name}`,
-    priceLabel: Number.isFinite(price) ? `${price.toFixed(pricePrecision)} ${token1Ticker}` : '--',
-    priceSubLabel: `per ${token0Ticker}`,
-    utilizationPct: utilization,
-    utilizationLabel: formatPercent(utilization),
-    feeLabel: `${(pair.swapFeeBps / 100).toFixed(2)}% fee`,
-    reserveLabel: `R ${formatCompact(reserve0, 1)}/${formatCompact(reserve1, 1)}`,
-    reserveTooltip: `${formatCompact(reserve0)} ${token0Ticker} • ${formatCompact(reserve1)} ${token1Ticker}`,
-    statusLabel: pair.reduceOnly ? 'Reduce-only' : 'Active',
-    trend: utilization >= 85 ? 'down' : 'up',
-  }
-}
-
 function App() {
   const { account, isConnected } = useConnector()
   const { rpcUrl } = useRpc()
   const { signer, simulate, send } = useSendSmartTransaction()
+
   const [walletOpen, setWalletOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<AppTab>('Pools')
   const activeTabIndex = Math.max(0, APP_TABS.indexOf(activeTab))
   const walletDropdownRef = useRef<HTMLDivElement | null>(null)
+  const lastBorrowPoolAddressRef = useRef<string | null>(null)
 
   const [poolsLoading, setPoolsLoading] = useState(false)
   const [poolsError, setPoolsError] = useState<string | null>(null)
@@ -639,6 +123,7 @@ function App() {
   const [debugError, setDebugError] = useState<string | null>(null)
   const [recentSignatures, setRecentSignatures] = useState<SignatureResult[]>([])
   const [hasLoadedDebug, setHasLoadedDebug] = useState(false)
+
   const [tradeFromAmount, setTradeFromAmount] = useState('1.0')
   const [tradeToAmount, setTradeToAmount] = useState('')
   const [tradeFromToken, setTradeFromToken] = useState('')
@@ -646,12 +131,17 @@ function App() {
   const [tradeSubmitting, setTradeSubmitting] = useState(false)
   const [tradeStatus, setTradeStatus] = useState<string | null>(null)
   const [tradeError, setTradeError] = useState<string | null>(null)
+
   const [borrowPool, setBorrowPool] = useState('')
   const [borrowToken, setBorrowToken] = useState('')
-  const [borrowAmount, setBorrowAmount] = useState('10')
+  const [borrowAmount, setBorrowAmount] = useState('')
+  const [collateralToken, setCollateralToken] = useState('')
+  const [collateralAmount, setCollateralAmount] = useState('')
+  const [borrowTokenBalances, setBorrowTokenBalances] = useState<Record<string, number>>({})
   const [borrowSubmitting, setBorrowSubmitting] = useState(false)
   const [borrowStatus, setBorrowStatus] = useState<string | null>(null)
   const [borrowError, setBorrowError] = useState<string | null>(null)
+
   const [positionsLoading, setPositionsLoading] = useState(false)
   const [positionsError, setPositionsError] = useState<string | null>(null)
   const [loanPositions, setLoanPositions] = useState<LoanPositionView[]>([])
@@ -678,49 +168,46 @@ function App() {
 
   const tradeTokenOptions = useMemo<TradeTokenOption[]>(() => {
     const map = new Map<string, TradeTokenOption>()
+
+    const upsertTokenOption = (token: TradeTokenOption) => {
+      const existing = map.get(token.mint)
+      if (!existing) {
+        map.set(token.mint, token)
+        return
+      }
+      if (!existing.logoUrl && token.logoUrl) {
+        map.set(token.mint, {
+          ...existing,
+          logoUrl: token.logoUrl,
+        })
+      }
+    }
+
     for (const pool of pools) {
-      if (!map.has(pool.token0Mint)) {
-        map.set(pool.token0Mint, {
-          mint: pool.token0Mint,
-          ticker: pool.token0Ticker,
-          name: pool.token0Ticker,
-          logo: pool.token0Ticker.slice(0, 1),
-          color: getTokenColor(pool.token0Mint),
-        })
-      }
-      if (!map.has(pool.token1Mint)) {
-        map.set(pool.token1Mint, {
-          mint: pool.token1Mint,
-          ticker: pool.token1Ticker,
-          name: pool.token1Ticker,
-          logo: pool.token1Ticker.slice(0, 1),
-          color: getTokenColor(pool.token1Mint),
-        })
-      }
+      upsertTokenOption({
+        mint: pool.token0Mint,
+        ticker: pool.token0Ticker,
+        name: pool.token0Ticker,
+        logo: pool.token0Ticker.slice(0, 1),
+        color: getTokenColor(pool.token0Mint),
+        logoUrl: pool.token0LogoUrl,
+      })
+      upsertTokenOption({
+        mint: pool.token1Mint,
+        ticker: pool.token1Ticker,
+        name: pool.token1Ticker,
+        logo: pool.token1Ticker.slice(0, 1),
+        color: getTokenColor(pool.token1Mint),
+        logoUrl: pool.token1LogoUrl,
+      })
     }
     return [...map.values()].sort((a, b) => a.ticker.localeCompare(b.ticker))
   }, [pools])
 
-  const tradeFromTokenInfo = useMemo(
-    () =>
-      tradeTokenOptions.find((token) => token.mint === tradeFromToken) ??
-      tradeTokenOptions[0] ??
-      DEFAULT_TRADE_TOKEN,
-    [tradeFromToken, tradeTokenOptions],
-  )
-
   const selectedTradePool = useMemo(() => {
     return (
-      pools.find(
-        (pool) =>
-          pool.token0Mint === tradeFromToken &&
-          pool.token1Mint === tradeToToken,
-      ) ??
-      pools.find(
-        (pool) =>
-          pool.token0Mint === tradeToToken &&
-          pool.token1Mint === tradeFromToken,
-      ) ??
+      pools.find((pool) => pool.token0Mint === tradeFromToken && pool.token1Mint === tradeToToken) ??
+      pools.find((pool) => pool.token0Mint === tradeToToken && pool.token1Mint === tradeFromToken) ??
       null
     )
   }, [pools, tradeFromToken, tradeToToken])
@@ -746,6 +233,7 @@ function App() {
         name: selectedBorrowPool.token0Ticker,
         logo: selectedBorrowPool.token0Ticker.slice(0, 1),
         color: getTokenColor(selectedBorrowPool.token0Mint),
+        logoUrl: selectedBorrowPool.token0LogoUrl,
       },
       {
         mint: selectedBorrowPool.token1Mint,
@@ -753,9 +241,30 @@ function App() {
         name: selectedBorrowPool.token1Ticker,
         logo: selectedBorrowPool.token1Ticker.slice(0, 1),
         color: getTokenColor(selectedBorrowPool.token1Mint),
+        logoUrl: selectedBorrowPool.token1LogoUrl,
       },
     ]
   }, [selectedBorrowPool])
+
+  const collateralTokenOptions = borrowTokenOptions
+
+  const borrowSelectableTokenOptions = useMemo(() => {
+    const filtered = borrowTokenOptions.filter((token) => token.mint !== collateralToken)
+    return filtered.length ? filtered : borrowTokenOptions
+  }, [borrowTokenOptions, collateralToken])
+
+  const collateralSelectableTokenOptions = useMemo(() => {
+    const filtered = collateralTokenOptions.filter((token) => token.mint !== borrowToken)
+    return filtered.length ? filtered : collateralTokenOptions
+  }, [borrowToken, collateralTokenOptions])
+
+  const tradeFromTokenInfo = useMemo(
+    () =>
+      tradeTokenOptions.find((token) => token.mint === tradeFromToken) ??
+      tradeTokenOptions[0] ??
+      DEFAULT_TRADE_TOKEN,
+    [tradeFromToken, tradeTokenOptions],
+  )
 
   const borrowTokenInfo = useMemo(
     () =>
@@ -764,6 +273,111 @@ function App() {
       DEFAULT_TRADE_TOKEN,
     [borrowToken, borrowTokenOptions],
   )
+
+  const collateralTokenInfo = useMemo(
+    () =>
+      collateralTokenOptions.find((token) => token.mint === collateralToken) ??
+      collateralTokenOptions[0] ??
+      DEFAULT_TRADE_TOKEN,
+    [collateralToken, collateralTokenOptions],
+  )
+
+  const selectedBorrowLoanPosition = useMemo(() => {
+    if (!selectedBorrowPool) return null
+    return loanPositions.find((position) => position.poolAddress === selectedBorrowPool.address) ?? null
+  }, [loanPositions, selectedBorrowPool])
+
+  const estimatedCf0Bps = useMemo(() => {
+    if (selectedBorrowLoanPosition?.cf0) return selectedBorrowLoanPosition.cf0
+    if (selectedBorrowPool?.fixedCfBps) return selectedBorrowPool.fixedCfBps
+    return 5000
+  }, [selectedBorrowLoanPosition, selectedBorrowPool])
+
+  const estimatedCf1Bps = useMemo(() => {
+    if (selectedBorrowLoanPosition?.cf1) return selectedBorrowLoanPosition.cf1
+    if (selectedBorrowPool?.fixedCfBps) return selectedBorrowPool.fixedCfBps
+    return 5000
+  }, [selectedBorrowLoanPosition, selectedBorrowPool])
+
+  const currentBorrowHealth = useMemo<BorrowHealthSnapshot | null>(() => {
+    if (!selectedBorrowPool) return null
+
+    return computeBorrowHealthSnapshot({
+      priceToken1PerToken0: selectedBorrowPool.price,
+      collateral0: selectedBorrowLoanPosition?.collateral0 ?? 0,
+      collateral1: selectedBorrowLoanPosition?.collateral1 ?? 0,
+      debt0: selectedBorrowLoanPosition?.debt0 ?? 0,
+      debt1: selectedBorrowLoanPosition?.debt1 ?? 0,
+      cf0Bps: estimatedCf0Bps,
+      cf1Bps: estimatedCf1Bps,
+    })
+  }, [estimatedCf0Bps, estimatedCf1Bps, selectedBorrowLoanPosition, selectedBorrowPool])
+
+  const projectedBorrowHealth = useMemo<BorrowHealthSnapshot | null>(() => {
+    if (!selectedBorrowPool || !currentBorrowHealth) return null
+
+    let collateral0 = selectedBorrowLoanPosition?.collateral0 ?? 0
+    let collateral1 = selectedBorrowLoanPosition?.collateral1 ?? 0
+    let debt0 = selectedBorrowLoanPosition?.debt0 ?? 0
+    let debt1 = selectedBorrowLoanPosition?.debt1 ?? 0
+
+    const collateralIsToken0 = selectedBorrowPool.token0Mint === collateralToken
+    const collateralDecimals = collateralIsToken0
+      ? selectedBorrowPool.token0Decimals
+      : selectedBorrowPool.token1Decimals
+    const collateralBase = collateralToken && collateralAmount.trim()
+      ? toBaseUnits(collateralAmount, collateralDecimals)
+      : 0n
+    const collateralValue =
+      collateralBase && collateralBase > 0n ? toDisplayNumber(collateralBase, collateralDecimals) : 0
+    if (collateralValue > 0) {
+      if (collateralIsToken0) {
+        collateral0 += collateralValue
+      } else {
+        collateral1 += collateralValue
+      }
+    }
+
+    const borrowIsToken0 = selectedBorrowPool.token0Mint === borrowToken
+    const borrowDecimals = borrowIsToken0
+      ? selectedBorrowPool.token0Decimals
+      : selectedBorrowPool.token1Decimals
+    const borrowBase = borrowToken ? toBaseUnits(borrowAmount, borrowDecimals) : 0n
+    const borrowValue = borrowBase && borrowBase > 0n ? toDisplayNumber(borrowBase, borrowDecimals) : 0
+    if (borrowValue > 0) {
+      if (borrowIsToken0) {
+        debt0 += borrowValue
+      } else {
+        debt1 += borrowValue
+      }
+    }
+
+    return computeBorrowHealthSnapshot({
+      priceToken1PerToken0: selectedBorrowPool.price,
+      collateral0,
+      collateral1,
+      debt0,
+      debt1,
+      cf0Bps: estimatedCf0Bps,
+      cf1Bps: estimatedCf1Bps,
+    })
+  }, [
+    borrowAmount,
+    borrowToken,
+    collateralAmount,
+    collateralToken,
+    currentBorrowHealth,
+    estimatedCf0Bps,
+    estimatedCf1Bps,
+    selectedBorrowLoanPosition,
+    selectedBorrowPool,
+  ])
+
+  const collateralBalanceLabel = useMemo(() => {
+    if (!collateralTokenInfo.mint) return '--'
+    const balance = borrowTokenBalances[collateralTokenInfo.mint] ?? 0
+    return `${formatCompact(balance, 4)} ${collateralTokenInfo.ticker}`
+  }, [borrowTokenBalances, collateralTokenInfo])
 
   const poolSelectOptions = useMemo<PoolSelectOption[]>(() => {
     return pools.map((pool) => ({
@@ -839,6 +453,47 @@ function App() {
     [rpcRequest],
   )
 
+  const loadBorrowTokenBalances = useCallback(async () => {
+    if (!account || !isConnected || !selectedBorrowPool) {
+      setBorrowTokenBalances({})
+      return
+    }
+
+    try {
+      const [tokenkegAccounts, token2022Accounts] = await Promise.all([
+        rpcRequest<RpcParsedTokenAccountsResult>('getTokenAccountsByOwner', [
+          account,
+          { programId: TOKEN_PROGRAM_ID },
+          { commitment: 'confirmed', encoding: 'jsonParsed' },
+        ]),
+        rpcRequest<RpcParsedTokenAccountsResult>('getTokenAccountsByOwner', [
+          account,
+          { programId: TOKEN_2022_PROGRAM_ID },
+          { commitment: 'confirmed', encoding: 'jsonParsed' },
+        ]).catch(() => ({ value: [] })),
+      ])
+
+      const nextBalances: Record<string, number> = {
+        [selectedBorrowPool.token0Mint]: 0,
+        [selectedBorrowPool.token1Mint]: 0,
+      }
+
+      const allAccounts = [...tokenkegAccounts.value, ...token2022Accounts.value]
+      for (const tokenAccount of allAccounts) {
+        const info = tokenAccount.account?.data?.parsed?.info
+        const mint = info?.mint
+        if (!mint || !(mint in nextBalances)) continue
+        const amount = info.tokenAmount?.uiAmount ?? Number(info.tokenAmount?.uiAmountString ?? '0')
+        if (!Number.isFinite(amount) || amount <= 0) continue
+        nextBalances[mint] = (nextBalances[mint] ?? 0) + amount
+      }
+
+      setBorrowTokenBalances(nextBalances)
+    } catch {
+      setBorrowTokenBalances({})
+    }
+  }, [account, isConnected, rpcRequest, selectedBorrowPool])
+
   const loadPools = useCallback(async () => {
     setPoolsLoading(true)
     setPoolsError(null)
@@ -862,7 +517,7 @@ function App() {
           const encodedData = accountItem.account.data
           const base64Data = Array.isArray(encodedData) ? encodedData[0] : encodedData
           if (typeof base64Data !== 'string') throw new Error('Invalid account data encoding')
-          const pair = decoder.decode(base64ToBytes(base64Data))
+          const pair = decoder.decode(base64ToBytes(base64Data)) as Pair
           return mapPairToPoolView(accountItem.pubkey, pair, tokenLogoMap)
         })
         .sort((a, b) => b.utilizationPct - a.utilizationPct)
@@ -923,9 +578,7 @@ function App() {
             const info = tokenAccount.account?.data?.parsed?.info
             const mint = info?.mint
             if (!mint) continue
-            const amount =
-              info.tokenAmount?.uiAmount ??
-              Number(info.tokenAmount?.uiAmountString ?? '0')
+            const amount = info.tokenAmount?.uiAmount ?? Number(info.tokenAmount?.uiAmountString ?? '0')
             if (!Number.isFinite(amount) || amount <= 0) continue
             balanceByMint.set(mint, (balanceByMint.get(mint) ?? 0) + amount)
           }
@@ -949,7 +602,6 @@ function App() {
           if (typeof base64Data === 'string') {
             try {
               const userPosition = decoder.decode(base64ToBytes(base64Data)) as UserPosition
-
               const collateral0 = toDisplayNumber(userPosition.collateral0, pool.token0Decimals)
               const collateral1 = toDisplayNumber(userPosition.collateral1, pool.token1Decimals)
               const debt0 = toDisplayNumber(
@@ -965,6 +617,15 @@ function App() {
                 loanPosition = {
                   poolAddress: pool.address,
                   symbol: pool.symbol,
+                  rateModel: pool.rateModel,
+                  token0Mint: pool.token0Mint,
+                  token1Mint: pool.token1Mint,
+                  token0Ticker: pool.token0Ticker,
+                  token1Ticker: pool.token1Ticker,
+                  token0Decimals: pool.token0Decimals,
+                  token1Decimals: pool.token1Decimals,
+                  token0LogoUrl: pool.token0LogoUrl,
+                  token1LogoUrl: pool.token1LogoUrl,
                   collateral0,
                   collateral1,
                   debt0,
@@ -1008,13 +669,7 @@ function App() {
     } finally {
       setPositionsLoading(false)
     }
-  }, [
-    account,
-    findUserPositionAddress,
-    isConnected,
-    pools,
-    rpcRequest,
-  ])
+  }, [account, findUserPositionAddress, isConnected, pools, rpcRequest])
 
   const loadDebugData = useCallback(async () => {
     setDebugLoading(true)
@@ -1039,12 +694,7 @@ function App() {
   }, [hasLoadedPools, loadPools, rpcRequest])
 
   useEffect(() => {
-    if (
-      activeTab !== 'Pools' &&
-      activeTab !== 'Trade' &&
-      activeTab !== 'Borrow' &&
-      activeTab !== 'Positions'
-    ) {
+    if (activeTab !== 'Pools' && activeTab !== 'Trade' && activeTab !== 'Borrow' && activeTab !== 'Positions') {
       return
     }
     if (hasLoadedPools) return
@@ -1058,7 +708,7 @@ function App() {
   }, [activeTab, hasLoadedDebug, loadDebugData])
 
   useEffect(() => {
-    if (activeTab !== 'Positions') return
+    if (activeTab !== 'Positions' && activeTab !== 'Borrow') return
     if (!isConnected || !account || !pools.length) {
       setLoanPositions([])
       setLpPositions([])
@@ -1093,11 +743,49 @@ function App() {
   }, [borrowPool, pools])
 
   useEffect(() => {
+    if (!selectedBorrowPool) return
+    if (lastBorrowPoolAddressRef.current === selectedBorrowPool.address) return
+    lastBorrowPoolAddressRef.current = selectedBorrowPool.address
+
+    setBorrowToken(selectedBorrowPool.token0Mint)
+    setCollateralToken(selectedBorrowPool.token1Mint)
+  }, [selectedBorrowPool])
+
+  useEffect(() => {
     if (!borrowTokenOptions.length) return
-    if (!borrowToken) {
-      setBorrowToken(borrowTokenOptions[0].mint)
+
+    const hasMint = (mint: string) => borrowTokenOptions.some((option) => option.mint === mint)
+    const firstMint = borrowTokenOptions[0].mint
+
+    let nextBorrowToken = borrowToken
+    let nextCollateralToken = collateralToken
+
+    if (!nextBorrowToken || !hasMint(nextBorrowToken)) {
+      nextBorrowToken = firstMint
     }
-  }, [borrowToken, borrowTokenOptions])
+    if (!nextCollateralToken || !hasMint(nextCollateralToken)) {
+      nextCollateralToken =
+        borrowTokenOptions.find((option) => option.mint !== nextBorrowToken)?.mint ?? firstMint
+    }
+
+    if (nextBorrowToken === nextCollateralToken) {
+      const alternateMint =
+        borrowTokenOptions.find((option) => option.mint !== nextBorrowToken)?.mint ?? nextBorrowToken
+      nextCollateralToken = alternateMint
+    }
+
+    if (nextBorrowToken !== borrowToken) {
+      setBorrowToken(nextBorrowToken)
+    }
+    if (nextCollateralToken !== collateralToken) {
+      setCollateralToken(nextCollateralToken)
+    }
+  }, [borrowToken, borrowTokenOptions, collateralToken])
+
+  useEffect(() => {
+    if (activeTab !== 'Borrow') return
+    void loadBorrowTokenBalances()
+  }, [activeTab, loadBorrowTokenBalances])
 
   useEffect(() => {
     if (!selectedTradePool) return
@@ -1152,9 +840,7 @@ function App() {
     const isDirect = selectedTradePool.token0Mint === tradeFromToken
     const tokenInMint = isDirect ? selectedTradePool.token0Mint : selectedTradePool.token1Mint
     const tokenOutMint = isDirect ? selectedTradePool.token1Mint : selectedTradePool.token0Mint
-    const tokenInDecimals = isDirect
-      ? selectedTradePool.token0Decimals
-      : selectedTradePool.token1Decimals
+    const tokenInDecimals = isDirect ? selectedTradePool.token0Decimals : selectedTradePool.token1Decimals
 
     const amountIn = toBaseUnits(tradeFromAmount, tokenInDecimals)
     if (!amountIn || amountIn <= 0n) {
@@ -1172,8 +858,7 @@ function App() {
       }
 
       const existingOutAccount = await getOwnedTokenAccount(account, tokenOutMint)
-      const userTokenOutAccount =
-        existingOutAccount ?? (await findAssociatedTokenAddress(account, tokenOutMint))
+      const userTokenOutAccount = existingOutAccount ?? (await findAssociatedTokenAddress(account, tokenOutMint))
 
       const swapInstruction = await getSwapInstructionAsync({
         pair: selectedTradePool.address as Address,
@@ -1190,30 +875,30 @@ function App() {
 
       const simulation = await simulate([swapInstruction as any])
       if (simulation?.value?.err) {
-        setTradeError(`Simulation failed: ${JSON.stringify(simulation.value.err)}`)
+        setTradeError(`Simulation failed: ${formatSimulationError(simulation.value.err)}`)
         return
       }
 
       const signature = await send([swapInstruction as any])
       setTradeStatus(`Swap submitted: ${shortAddress(signature)}`)
     } catch (error) {
-      setTradeError(error instanceof Error ? error.message : 'Swap failed')
+      setTradeError(formatActionError(error, 'Swap failed'))
     } finally {
       setTradeSubmitting(false)
     }
   }, [
     account,
-    isConnected,
-    signer,
-    selectedTradePool,
-    tradeFromToken,
-    tradeToToken,
-    tradeFromAmount,
-    getOwnedTokenAccount,
-    tradeFromTokenInfo,
     findAssociatedTokenAddress,
-    simulate,
+    getOwnedTokenAccount,
+    isConnected,
+    selectedTradePool,
     send,
+    signer,
+    simulate,
+    tradeFromAmount,
+    tradeFromToken,
+    tradeFromTokenInfo,
+    tradeToToken,
   ])
 
   const executeBorrow = useCallback(async () => {
@@ -1235,16 +920,38 @@ function App() {
       return
     }
 
+    if (borrowToken === collateralToken) {
+      setBorrowError('Borrow token and collateral token must be different in this pool.')
+      return
+    }
+
+    if (!collateralToken) {
+      setBorrowError('Select a collateral token.')
+      return
+    }
+
     const isToken0 = selectedBorrowPool.token0Mint === borrowToken
-    const borrowDecimals = isToken0
-      ? selectedBorrowPool.token0Decimals
-      : selectedBorrowPool.token1Decimals
+    const borrowDecimals = isToken0 ? selectedBorrowPool.token0Decimals : selectedBorrowPool.token1Decimals
     const amount = toBaseUnits(borrowAmount, borrowDecimals)
 
     if (!amount || amount <= 0n) {
       setBorrowError('Enter a valid borrow amount.')
       return
     }
+
+    const collateralIsToken0 = selectedBorrowPool.token0Mint === collateralToken
+    const collateralDecimals = collateralIsToken0
+      ? selectedBorrowPool.token0Decimals
+      : selectedBorrowPool.token1Decimals
+    const normalizedCollateralInput = collateralAmount.trim()
+    const collateralBaseAmount = normalizedCollateralInput
+      ? toBaseUnits(normalizedCollateralInput, collateralDecimals)
+      : 0n
+    if (normalizedCollateralInput && collateralBaseAmount === null) {
+      setBorrowError('Enter a valid collateral amount.')
+      return
+    }
+    const shouldAddCollateral = typeof collateralBaseAmount === 'bigint' && collateralBaseAmount > 0n
 
     setBorrowSubmitting(true)
 
@@ -1253,6 +960,26 @@ function App() {
       if (!userReserveTokenAccount) {
         setBorrowError(`No token account found for ${borrowTokenInfo.ticker}.`)
         return
+      }
+
+      const transactionInstructions: Array<any> = []
+      if (shouldAddCollateral) {
+        const userCollateralTokenAccount = await getOwnedTokenAccount(account, collateralToken)
+        if (!userCollateralTokenAccount) {
+          setBorrowError(`No token account found for ${collateralTokenInfo.ticker}.`)
+          return
+        }
+
+        const addCollateralInstruction = await getAddCollateralInstructionAsync({
+          pair: selectedBorrowPool.address as Address,
+          rateModel: selectedBorrowPool.rateModel as Address,
+          userCollateralTokenAccount: userCollateralTokenAccount as Address,
+          collateralTokenMint: collateralToken as Address,
+          user: signer as any,
+          program: OMNIPAIR_PROGRAM_ID as Address,
+          args: { amount: collateralBaseAmount },
+        })
+        transactionInstructions.push(addCollateralInstruction as any)
       }
 
       const borrowInstruction = await getBorrowInstructionAsync({
@@ -1264,36 +991,109 @@ function App() {
         program: OMNIPAIR_PROGRAM_ID as Address,
         args: { amount },
       })
+      transactionInstructions.push(borrowInstruction as any)
 
-      const simulation = await simulate([borrowInstruction as any])
+      const simulation = await simulate(transactionInstructions)
       if (simulation?.value?.err) {
-        setBorrowError(`Simulation failed: ${JSON.stringify(simulation.value.err)}`)
+        setBorrowError(`Simulation failed: ${formatSimulationError(simulation.value.err)}`)
         return
       }
 
-      const signature = await send([borrowInstruction as any])
-      setBorrowStatus(`Borrow submitted: ${shortAddress(signature)}`)
+      const signature = await send(transactionInstructions)
+      setBorrowStatus(
+        `${shouldAddCollateral ? 'Collateral + borrow' : 'Borrow'} submitted: ${shortAddress(signature)}`,
+      )
+      setCollateralAmount('')
       void loadPools()
       void loadPositionsData()
+      void loadBorrowTokenBalances()
     } catch (error) {
-      setBorrowError(error instanceof Error ? error.message : 'Borrow failed')
+      setBorrowError(formatActionError(error, 'Borrow failed'))
     } finally {
       setBorrowSubmitting(false)
     }
   }, [
     account,
-    isConnected,
-    signer,
-    selectedBorrowPool,
-    borrowToken,
     borrowAmount,
+    borrowToken,
     borrowTokenInfo,
+    collateralAmount,
+    collateralToken,
+    collateralTokenInfo,
     getOwnedTokenAccount,
+    isConnected,
+    loadBorrowTokenBalances,
     loadPools,
     loadPositionsData,
-    simulate,
+    selectedBorrowPool,
     send,
+    signer,
+    simulate,
   ])
+
+  const executeRepayLoan = useCallback(
+    async (poolAddress: string, reserveTokenMint: string, amountInput: string) => {
+      if (!account || !isConnected || !signer) {
+        throw new Error('Connect wallet to repay.')
+      }
+
+      const pool = pools.find((item) => item.address === poolAddress)
+      if (!pool) {
+        throw new Error('Pool not found for this position.')
+      }
+
+      const reserveIsToken0 = reserveTokenMint === pool.token0Mint
+      const reserveIsToken1 = reserveTokenMint === pool.token1Mint
+      if (!reserveIsToken0 && !reserveIsToken1) {
+        throw new Error('Selected repay token does not belong to this pool.')
+      }
+
+      const reserveDecimals = reserveIsToken0 ? pool.token0Decimals : pool.token1Decimals
+      const repayAmount = toBaseUnits(amountInput, reserveDecimals)
+      if (!repayAmount || repayAmount <= 0n) {
+        throw new Error('Enter a valid repay amount.')
+      }
+
+      const userReserveTokenAccount = await getOwnedTokenAccount(account, reserveTokenMint)
+      if (!userReserveTokenAccount) {
+        const tokenLabel = reserveIsToken0 ? pool.token0Ticker : pool.token1Ticker
+        throw new Error(`No token account found for ${tokenLabel}.`)
+      }
+
+      const repayInstruction = await getRepayInstructionAsync({
+        pair: pool.address as Address,
+        rateModel: pool.rateModel as Address,
+        userReserveTokenAccount: userReserveTokenAccount as Address,
+        reserveTokenMint: reserveTokenMint as Address,
+        user: signer as any,
+        program: OMNIPAIR_PROGRAM_ID as Address,
+        args: { amount: repayAmount },
+      })
+
+      const simulation = await simulate([repayInstruction as any])
+      if (simulation?.value?.err) {
+        throw new Error(`Simulation failed: ${formatSimulationError(simulation.value.err)}`)
+      }
+
+      const signature = await send([repayInstruction as any])
+      void loadPools()
+      void loadPositionsData()
+      void loadBorrowTokenBalances()
+      return signature
+    },
+    [
+      account,
+      getOwnedTokenAccount,
+      isConnected,
+      loadBorrowTokenBalances,
+      loadPools,
+      loadPositionsData,
+      pools,
+      send,
+      signer,
+      simulate,
+    ],
+  )
 
   const mainContent = (
     <main className="content">
@@ -1331,345 +1131,94 @@ function App() {
 
           <div className="market-content-card">
             {activeTab === 'Pools' && (
-              <>
-                <div className="pool-summary">
-                  <span>{pools.length} pools</span>
-                  <Link to="/pools/new" className="pool-create-btn">
-                    <span className="pool-create-icon">＋</span>
-                    New Pool
-                  </Link>
-                </div>
-
-                {poolsError && <div className="status-block error">{poolsError}</div>}
-
-                {!poolsError && poolsLoading && !pools.length && (
-                  <div className="status-block">Loading Omnipair pools...</div>
-                )}
-
-                {!poolsError && !poolsLoading && pools.length === 0 && (
-                  <div className="status-block">No pools found for this program right now.</div>
-                )}
-
-                {!!pools.length && (
-                  <div className="market-list pools-list">
-                    {pools.map((pool) => (
-                      <Link
-                        key={pool.address}
-                        to={`/pools/${pool.address}`}
-                        className="market-row pool-row pool-row-link"
-                        title={`${pool.name} • ${pool.address}`}
-                      >
-                        <div className="pool-pair">
-                          <div className="pool-logo-stack">
-                            <PoolLogo
-                              className="pool-logo"
-                              logoUrl={pool.token0LogoUrl}
-                              fallback={pool.token0Ticker.slice(0, 1)}
-                              alt={`${pool.token0Ticker} logo`}
-                            />
-                            <PoolLogo
-                              className="pool-logo pool-logo-secondary"
-                              logoUrl={pool.token1LogoUrl}
-                              fallback={pool.token1Ticker.slice(0, 1)}
-                              alt={`${pool.token1Ticker} logo`}
-                            />
-                          </div>
-                          <div className="pool-pair-line">{pool.symbol}</div>
-                        </div>
-                        <div className="pool-price-line">
-                          <span className="pool-price-main">{pool.priceLabel}</span>
-                          <span className="pool-price-sub">{pool.priceSubLabel}</span>
-                        </div>
-                        <div className={`market-change ${pool.trend} pool-util-pill`}>
-                          Util {pool.utilizationLabel}
-                        </div>
-                        <span className="pool-pill pool-pill-inline">{pool.feeLabel}</span>
-                        <span
-                          className={`pool-pill pool-pill-inline ${
-                            pool.statusLabel === 'Reduce-only' ? 'danger' : 'neutral'
-                          }`}
-                        >
-                          {pool.statusLabel}
-                        </span>
-                        <span className="pool-hint pool-hint-inline" title={pool.reserveTooltip}>
-                          {pool.reserveLabel}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </>
+              <PoolsTab pools={pools} poolsLoading={poolsLoading} poolsError={poolsError} />
             )}
 
             {activeTab === 'Trade' && (
-              <div className="trade-shell">
-                <section className="trade-card">
-                  {!tradeTokenOptions.length && (
-                    <div className="status-block">Load pools first to enable trading.</div>
-                  )}
-
-                  <div className="trade-field">
-                    <label htmlFor="trade-from-amount">From</label>
-                    <div className="trade-input-wrap">
-                      <input
-                        id="trade-from-amount"
-                        className="trade-input"
-                        value={tradeFromAmount}
-                        onChange={(event) => setTradeFromAmount(event.target.value)}
-                        inputMode="decimal"
-                      />
-                      <TokenSelect
-                        value={tradeFromToken}
-                        options={tradeTokenOptions}
-                        onChange={(value) => setTradeFromToken(value)}
-                        ariaLabel="Select token to swap from"
-                        disabled={!tradeTokenOptions.length}
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="trade-switch"
-                    onClick={switchTradeDirection}
-                    aria-label="Switch token direction"
-                  >
-                    ↕
-                  </button>
-
-                  <div className="trade-field">
-                    <label htmlFor="trade-to-amount">To</label>
-                    <div className="trade-input-wrap">
-                      <input
-                        id="trade-to-amount"
-                        className="trade-input"
-                        value={tradeToAmount}
-                        onChange={(event) => setTradeToAmount(event.target.value)}
-                        inputMode="decimal"
-                      />
-                      <TokenSelect
-                        value={tradeToToken}
-                        options={tradeTokenOptions}
-                        onChange={(value) => setTradeToToken(value)}
-                        ariaLabel="Select token to swap to"
-                        disabled={!tradeTokenOptions.length}
-                      />
-                    </div>
-                  </div>
-
-                  {tradeError && <div className="status-block error">{tradeError}</div>}
-                  {tradeStatus && <div className="status-block">{tradeStatus}</div>}
-                  {!tradeError && tradeFromToken && tradeToToken && !selectedTradePool && (
-                    <div className="status-block">No direct pool found for selected token pair.</div>
-                  )}
-
-                  <button
-                    type="button"
-                    className="trade-submit"
-                    onClick={executeTrade}
-                    disabled={
-                      tradeSubmitting || !tradeTokenOptions.length || !tradeFromToken || !tradeToToken
-                    }
-                  >
-                    {tradeSubmitting ? 'Submitting…' : 'Place Swap'}
-                  </button>
-                </section>
-              </div>
+              <TradeTab
+                tradeTokenOptions={tradeTokenOptions}
+                tradeFromAmount={tradeFromAmount}
+                tradeToAmount={tradeToAmount}
+                tradeFromToken={tradeFromToken}
+                tradeToToken={tradeToToken}
+                tradeError={tradeError}
+                tradeStatus={tradeStatus}
+                tradeSubmitting={tradeSubmitting}
+                hasDirectPool={Boolean(selectedTradePool)}
+                setTradeFromAmount={setTradeFromAmount}
+                setTradeToAmount={setTradeToAmount}
+                setTradeFromToken={setTradeFromToken}
+                setTradeToToken={setTradeToToken}
+                switchTradeDirection={switchTradeDirection}
+                executeTrade={executeTrade}
+              />
             )}
 
             {activeTab === 'Borrow' && (
-              <div className="borrow-shell borrow-center">
-                <section className="trade-card borrow-card">
-                  {!pools.length && (
-                    <div className="status-block">Load pools to enable borrowing.</div>
-                  )}
-
-                  <div className="trade-field">
-                    <label htmlFor="borrow-pool">Pool</label>
-                    <PoolSelect
-                      id="borrow-pool"
-                      value={borrowPool}
-                      options={poolSelectOptions}
-                      onChange={(value) => setBorrowPool(value)}
-                      ariaLabel="Select pool"
-                      disabled={!pools.length}
-                    />
-                  </div>
-
-                  {selectedBorrowPool?.statusLabel === 'Reduce-only' && (
-                    <div className="status-block error">
-                      This pool is reduce-only. Borrowing is currently disabled.
-                    </div>
-                  )}
-
-                  <div className="trade-field">
-                    <label htmlFor="borrow-amount">Amount</label>
-                    <div className="trade-input-wrap">
-                      <input
-                        id="borrow-amount"
-                        className="trade-input"
-                        value={borrowAmount}
-                        onChange={(event) => setBorrowAmount(event.target.value)}
-                        inputMode="decimal"
-                      />
-                      <TokenSelect
-                        value={borrowToken}
-                        options={borrowTokenOptions}
-                        onChange={(value) => setBorrowToken(value)}
-                        ariaLabel="Select token to borrow"
-                        disabled={!borrowTokenOptions.length}
-                      />
-                    </div>
-                  </div>
-
-                  {borrowError && <div className="status-block error">{borrowError}</div>}
-                  {borrowStatus && <div className="status-block">{borrowStatus}</div>}
-
-                  <button
-                    type="button"
-                    className="trade-submit"
-                    onClick={executeBorrow}
-                    disabled={
-                      borrowSubmitting ||
-                      !borrowToken ||
-                      !borrowPool ||
-                      selectedBorrowPool?.statusLabel === 'Reduce-only'
-                    }
-                  >
-                    {borrowSubmitting ? 'Submitting…' : 'Borrow'}
-                  </button>
-                </section>
-              </div>
+              <BorrowTab
+                isWalletConnected={Boolean(isConnected && account)}
+                pools={pools}
+                poolSelectOptions={poolSelectOptions}
+                borrowPool={borrowPool}
+                borrowAmount={borrowAmount}
+                borrowToken={borrowToken}
+                borrowTokenOptions={borrowSelectableTokenOptions}
+                collateralAmount={collateralAmount}
+                collateralToken={collateralToken}
+                collateralTokenOptions={collateralSelectableTokenOptions}
+                selectedBorrowPool={selectedBorrowPool}
+                currentBorrowHealth={currentBorrowHealth}
+                projectedBorrowHealth={projectedBorrowHealth}
+                estimatedCf0Bps={estimatedCf0Bps}
+                estimatedCf1Bps={estimatedCf1Bps}
+                collateralBalanceLabel={collateralBalanceLabel}
+                borrowError={borrowError}
+                borrowStatus={borrowStatus}
+                borrowSubmitting={borrowSubmitting}
+                setBorrowPool={setBorrowPool}
+                setBorrowAmount={setBorrowAmount}
+                setBorrowToken={setBorrowToken}
+                setCollateralAmount={setCollateralAmount}
+                setCollateralToken={setCollateralToken}
+                executeBorrow={executeBorrow}
+              />
             )}
 
             {activeTab === 'Positions' && (
-              <div className="borrow-shell">
-                {!isConnected && (
-                  <div className="status-block">Connect wallet to view your positions.</div>
-                )}
-                {positionsLoading && isConnected && (
-                  <div className="status-block">Loading positions…</div>
-                )}
-                {positionsError && <div className="status-block error">{positionsError}</div>}
-
-                {isConnected && !positionsLoading && !positionsError && (
-                  <div className="positions-layout">
-                    <section className="positions-section">
-                      <header className="positions-head">
-                        <h3>LP Positions</h3>
-                        <span>{lpPositions.length}</span>
-                      </header>
-                      {!lpPositions.length && (
-                        <div className="status-block">No LP positions found.</div>
-                      )}
-                      {!!lpPositions.length && (
-                        <div className="positions-list">
-                          {lpPositions.map((position) => (
-                            <Link
-                              key={position.poolAddress}
-                              to={`/pools/${position.poolAddress}`}
-                              className="positions-item"
-                            >
-                              <span className="positions-pool">{position.symbol}</span>
-                              <span className="positions-value">{position.lpBalanceLabel} LP</span>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </section>
-
-                    <section className="positions-section">
-                      <header className="positions-head">
-                        <h3>Loan Positions</h3>
-                        <span>{loanPositions.length}</span>
-                      </header>
-                      {!loanPositions.length && (
-                        <div className="status-block">No open loan positions found.</div>
-                      )}
-                      {!!loanPositions.length && (
-                        <div className="positions-list">
-                          {loanPositions.map((position) => (
-                            <Link
-                              key={position.poolAddress}
-                              to={`/pools/${position.poolAddress}`}
-                              className="positions-item positions-item-loan"
-                            >
-                              <span className="positions-pool">{position.symbol}</span>
-                              <span className="positions-value">
-                                Debt {formatCompact(position.debt0, 2)} /{' '}
-                                {formatCompact(position.debt1, 2)}
-                              </span>
-                              <span className="positions-meta">
-                                Collateral {formatCompact(position.collateral0, 2)} /{' '}
-                                {formatCompact(position.collateral1, 2)}
-                              </span>
-                              <span className="positions-meta">
-                                Min CF {position.cf0 ? `${(position.cf0 / 100).toFixed(2)}%` : '--'} /{' '}
-                                {position.cf1 ? `${(position.cf1 / 100).toFixed(2)}%` : '--'}
-                              </span>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </section>
-                  </div>
-                )}
-
-                <PositionJournal
-                  isConnected={isConnected}
-                  walletAddress={account ?? undefined}
-                  poolSymbols={poolSymbolsByAddress}
-                />
-              </div>
+              <PositionsTab
+                isConnected={isConnected}
+                account={account ?? null}
+                positionsLoading={positionsLoading}
+                positionsError={positionsError}
+                lpPositions={lpPositions}
+                loanPositions={loanPositions}
+                poolSymbolsByAddress={poolSymbolsByAddress}
+                onRepayLoan={executeRepayLoan}
+              />
             )}
 
             {activeTab === 'Debug' && (
-              <div className="debug-panel">
-                <div className="debug-top">
-                  <div>
-                    <div className="debug-title">Program Debug</div>
-                    <p>RPC: {rpcUrl}</p>
-                  </div>
-                  <button className="ghost-button" onClick={loadDebugData} disabled={debugLoading}>
-                    {debugLoading ? 'Loading…' : 'Refresh Debug Data'}
-                  </button>
-                </div>
-
-                {debugError && <div className="status-block error">{debugError}</div>}
-
-                <div className="debug-grid">
-                  <section className="debug-card">
-                    <h3>Pool Accounts ({poolAccounts.length})</h3>
-                    <div className="debug-list">
-                      {poolAccounts.slice(0, 12).map((pool) => (
-                        <code key={pool.pubkey}>{pool.pubkey}</code>
-                      ))}
-                      {!poolAccounts.length && <span>No pools found yet.</span>}
-                    </div>
-                  </section>
-
-                  <section className="debug-card">
-                    <h3>Recent Transactions</h3>
-                    <div className="debug-list">
-                      {recentSignatures.map((tx) => (
-                        <div key={tx.signature} className="debug-tx">
-                          <code>{tx.signature}</code>
-                          <span>Slot {tx.slot}</span>
-                          <span>{tx.err ? 'Error' : 'Success'}</span>
-                        </div>
-                      ))}
-                      {!recentSignatures.length && <span>No transactions loaded yet.</span>}
-                    </div>
-                  </section>
-                </div>
-
-                <LiquidityHeatmap />
-              </div>
+              <DebugTab
+                rpcUrl={rpcUrl}
+                debugLoading={debugLoading}
+                debugError={debugError}
+                poolAccounts={poolAccounts}
+                recentSignatures={recentSignatures}
+                loadDebugData={() => {
+                  void loadDebugData()
+                }}
+              />
             )}
 
             <div className="market-footer">
               {activeTab === 'Pools' ? (
-                <button className="link-button" onClick={loadPools} disabled={poolsLoading}>
+                <button
+                  className="link-button"
+                  onClick={() => {
+                    void loadPools()
+                  }}
+                  disabled={poolsLoading}
+                >
                   {poolsLoading ? 'Refreshing Pools…' : 'Refresh Pools'}
                 </button>
               ) : (
@@ -1693,11 +1242,8 @@ function App() {
             <span className="brand-name">omni_test</span>
           </div>
           <div className="header-actions">
-            <div
-              ref={walletDropdownRef}
-              className={`wallet-dropdown ${walletOpen ? 'open' : ''}`}
-            >
-              <button className="wallet-pill" onClick={() => setWalletOpen((v) => !v)}>
+            <div ref={walletDropdownRef} className={`wallet-dropdown ${walletOpen ? 'open' : ''}`}>
+              <button className="wallet-pill" onClick={() => setWalletOpen((value) => !value)}>
                 {walletLabel}
               </button>
               <div className="wallet-panel">

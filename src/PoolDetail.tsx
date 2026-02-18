@@ -20,6 +20,7 @@ import { useSendSmartTransaction } from './solana/useSendSmartTransaction'
 import PoolPerformanceDashboard from './components/pool/PoolPerformanceDashboard'
 import BorrowRiskPanel from './components/pool/BorrowRiskPanel'
 import SwapTape from './components/pool/SwapTape'
+import { formatActionError, formatSimulationError } from './lib/simulationError'
 
 type TokenInfo = {
   symbol: string
@@ -496,7 +497,7 @@ function PoolDetail() {
 
       const simulation = await simulate([instruction as any])
       if (simulation?.value?.err) {
-        setDepositError(`Simulation failed: ${JSON.stringify(simulation.value.err)}`)
+        setDepositError(`Simulation failed: ${formatSimulationError(simulation.value.err)}`)
         return
       }
 
@@ -505,7 +506,7 @@ function PoolDetail() {
       void loadPoolDetail()
       void loadBalances()
     } catch (err) {
-      setDepositError(err instanceof Error ? err.message : 'Deposit failed')
+      setDepositError(formatActionError(err, 'Deposit failed'))
     } finally {
       setDepositSubmitting(false)
     }
@@ -586,7 +587,7 @@ function PoolDetail() {
 
       const simulation = await simulate([instruction as any])
       if (simulation?.value?.err) {
-        setWithdrawError(`Simulation failed: ${JSON.stringify(simulation.value.err)}`)
+        setWithdrawError(`Simulation failed: ${formatSimulationError(simulation.value.err)}`)
         return
       }
 
@@ -595,7 +596,7 @@ function PoolDetail() {
       void loadPoolDetail()
       void loadBalances()
     } catch (err) {
-      setWithdrawError(err instanceof Error ? err.message : 'Withdraw failed')
+      setWithdrawError(formatActionError(err, 'Withdraw failed'))
     } finally {
       setWithdrawSubmitting(false)
     }

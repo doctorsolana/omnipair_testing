@@ -13,6 +13,7 @@ import { generateKeyPairSigner } from '@solana/signers'
 import { useConnector } from '@solana/connector'
 import { useRpc } from './solana/useRpc'
 import { useSendSmartTransaction } from './solana/useSendSmartTransaction'
+import { formatActionError, formatSimulationError } from './lib/simulationError'
 import {
   COLLATERAL_VAULT_SEED_PREFIX,
   EVENT_AUTHORITY_SEED_PREFIX,
@@ -417,14 +418,14 @@ function NewPool() {
 
       const simulation = await simulate(instructions)
       if (simulation?.value?.err) {
-        setError(`Simulation failed: ${JSON.stringify(simulation.value.err)}`)
+        setError(`Simulation failed: ${formatSimulationError(simulation.value.err)}`)
         return
       }
 
       const signature = await send(instructions)
       setStatus(`Pool created: ${signature}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Create pool failed')
+      setError(formatActionError(err, 'Create pool failed'))
     } finally {
       setSubmitting(false)
     }

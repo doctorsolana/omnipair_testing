@@ -12,7 +12,8 @@
     "indexer:probe": "node scripts/indexer-probe.mjs",
     "idl:fetch": "anchor idl fetch --provider.cluster mainnet -o idl/omnipair.json omnixgS8fnqHfCcTGKWj6JtKjzpJZ1Y5y9pyFkQDkYE",
     "codama:gen": "codama run --all",
-    "sdk:refresh": "pnpm idl:fetch && pnpm codama:gen && pnpm build"
+    "errors:gen": "node scripts/gen-omnipair-error-map.mjs",
+    "sdk:refresh": "pnpm idl:fetch && pnpm codama:gen && pnpm errors:gen && pnpm build"
   },
   "dependencies": {
     "@solana/connector": "^0.2.4",

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Address, Instruction } from '@solana/kit'
 import { useSendSmartTransaction } from '../solana/useSendSmartTransaction'
+import { formatActionError } from '../lib/simulationError'
 
 const MEMO_PROGRAM = 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr' as Address
 
@@ -34,8 +35,7 @@ export function TransactionSimulator() {
       setUnits(consumed)
       setStatus(consumed ? `Simulated (${consumed} units)` : 'Simulated')
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Simulation failed. Check console for details.'
+      const message = formatActionError(err, 'Simulation failed. Check console for details.')
       setError(message)
       setStatus('Simulation failed')
     }
@@ -52,7 +52,7 @@ export function TransactionSimulator() {
       setSignature(sig)
       setStatus('Sent')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Send failed. Check console for details.'
+      const message = formatActionError(err, 'Send failed. Check console for details.')
       setError(message)
       setStatus('Send failed')
     }
