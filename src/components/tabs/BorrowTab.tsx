@@ -33,6 +33,7 @@ type BorrowTabProps = {
   setBorrowToken: (value: string) => void
   setCollateralAmount: (value: string) => void
   setCollateralToken: (value: string) => void
+  switchBorrowDirection: () => void
   executeBorrow: () => void
 }
 
@@ -61,6 +62,7 @@ function BorrowTab({
   setBorrowToken,
   setCollateralAmount,
   setCollateralToken,
+  switchBorrowDirection,
   executeBorrow,
 }: BorrowTabProps) {
   const borrowTokenInfo = borrowTokenOptions.find((token) => token.mint === borrowToken) ?? null
@@ -162,7 +164,7 @@ function BorrowTab({
         )}
 
         <div className="trade-field">
-          <label htmlFor="borrow-amount">Amount</label>
+          <label htmlFor="borrow-amount">I want to borrow</label>
           <div className="trade-input-wrap">
             <input
               id="borrow-amount"
@@ -185,6 +187,16 @@ function BorrowTab({
             </span>
           )}
         </div>
+
+        <button
+          type="button"
+          className="trade-switch"
+          onClick={switchBorrowDirection}
+          aria-label="Switch borrow and collateral tokens"
+          disabled={borrowTokenOptions.length < 2 || collateralTokenOptions.length < 2}
+        >
+          ↕
+        </button>
 
         <div className="trade-field">
           <label htmlFor="borrow-collateral-amount">Collateral (isolated to this pool)</label>

@@ -20,6 +20,19 @@ const KNOWN_TOKEN_LOGOS: Record<string, string> = {
     'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4J9sMZ5vZ6n9Y9w4tY9f/logo.png',
 }
 
+const STABLE_SYMBOLS = new Set([
+  'USDC',
+  'USDT',
+  'USDS',
+  'USDE',
+  'USDH',
+  'PYUSD',
+  'FDUSD',
+  'USDB',
+  'DAI',
+  'USD',
+])
+
 export function shortAddress(value: string) {
   if (value.length < 12) return value
   return `${value.slice(0, 4)}…${value.slice(-4)}`
@@ -125,6 +138,114 @@ export function getIndexerTokenLogoMap(indexerPools: IndexerPoolListItem[]) {
   return iconMap
 }
 
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+function pickNumberFromObject(value: unknown): number | null {
+  if (!value || typeof value !== 'object') return null
+  const obj = value as Record<string, unknown>
+  const candidates = [
+    obj.usd,
+    obj.usdValue,
+    obj.value,
+    obj.total,
+    obj.tvl,
+    obj.tvlUsd,
+    obj.tvl_usd,
+    obj.amount,
+  ]
+  for (const candidate of candidates) {
+    const parsed = toFiniteNumber(candidate)
+    if (parsed !== null) return parsed
+  }
+  return null
+}
+
+function extractIndexerTvlUsd(pool: IndexerPoolListItem): number | null {
+  const candidates = [
+    pool.tvl_usd,
+    pool.tvlUsd,
+    pool.usd_tvl,
+    pool.total_tvl,
+    pool.tvl,
+    pool.metrics?.tvl_usd,
+    pool.metrics?.tvlUsd,
+    pool.metrics?.tvl,
+  ]
+
+  for (const candidate of candidates) {
+    const parsed = toFiniteNumber(candidate) ?? pickNumberFromObject(candidate)
+    if (parsed !== null && parsed > 0) return parsed
+  }
+
+  const reserve0 = toFiniteNumber(pool.reserves?.token0) ?? 0
+  const reserve1 = toFiniteNumber(pool.reserves?.token1) ?? 0
+  if (reserve0 <= 0 && reserve1 <= 0) return null
+
+  const token0Symbol = (pool.token0?.symbol ?? '').toUpperCase()
+  const token1Symbol = (pool.token1?.symbol ?? '').toUpperCase()
+  const token0IsStable = STABLE_SYMBOLS.has(token0Symbol)
+  const token1IsStable = STABLE_SYMBOLS.has(token1Symbol)
+
+  const priceToken1PerToken0 =
+    toFiniteNumber(pool.spot_prices?.token0) ??
+    toFiniteNumber(pool.oracle_prices?.token0) ??
+    (reserve0 > 0 && reserve1 > 0 ? reserve1 / reserve0 : null)
+  const priceToken0PerToken1 =
+    toFiniteNumber(pool.spot_prices?.token1) ??
+    toFiniteNumber(pool.oracle_prices?.token1) ??
+    (reserve0 > 0 && reserve1 > 0 ? reserve0 / reserve1 : null)
+
+  if (token0IsStable && token1IsStable) {
+    return reserve0 + reserve1
+  }
+
+  if (token1IsStable) {
+    if (priceToken1PerToken0 && priceToken1PerToken0 > 0) {
+      return reserve1 + reserve0 * priceToken1PerToken0
+    }
+    if (priceToken0PerToken1 && priceToken0PerToken1 > 0) {
+      return reserve1 + reserve0 / priceToken0PerToken1
+    }
+  }
+
+  if (token0IsStable) {
+    if (priceToken0PerToken1 && priceToken0PerToken1 > 0) {
+      return reserve0 + reserve1 * priceToken0PerToken1
+    }
+    if (priceToken1PerToken0 && priceToken1PerToken0 > 0) {
+      return reserve0 + reserve1 / priceToken1PerToken0
+    }
+  }
+
+  return null
+}
+
+export function getIndexerPoolTvlUsdMap(indexerPools: IndexerPoolListItem[]) {
+  const tvlMap: Record<string, number> = {}
+  for (const pool of indexerPools) {
+    const poolAddress = pool.pair_address ?? pool.pairAddress
+    if (!poolAddress || tvlMap[poolAddress]) continue
+    const tvl = extractIndexerTvlUsd(pool)
+    if (tvl !== null && tvl > 0) {
+      tvlMap[poolAddress] = tvl
+    }
+  }
+  return tvlMap
+}
+
+function formatUsdCompact(value: number) {
+  return `$${formatCompact(value, 2)}`
+}
+
 function resolveTokenLogo(mint: string, tokenLogoMap: Record<string, string>) {
   return tokenLogoMap[mint] ?? KNOWN_TOKEN_LOGOS[mint] ?? null
 }
@@ -133,6 +254,7 @@ export function mapPairToPoolView(
   address: string,
   pair: Pair,
   tokenLogoMap: Record<string, string> = {},
+  poolTvlUsdMap: Record<string, number> = {},
 ): PoolView {
   const token0 = getTokenInfo(pair.token0)
   const token1 = getTokenInfo(pair.token1)
@@ -147,9 +269,15 @@ export function mapPairToPoolView(
   const utilization0 = reserve0 > 0 ? (debt0 / reserve0) * 100 : 0
   const utilization1 = reserve1 > 0 ? (debt1 / reserve1) * 100 : 0
   const utilization = Math.max(utilization0, utilization1)
+  const tvlUsd = poolTvlUsdMap[address] ?? null
 
   const price = reserve0 > 0 && reserve1 > 0 ? reserve1 / reserve0 : NaN
   const pricePrecision = !Number.isFinite(price) ? 0 : price >= 100 ? 2 : price >= 1 ? 3 : 5
+  const reserveTooltip = `Reserves: ${formatCompact(reserve0)} ${token0Ticker} • ${formatCompact(reserve1)} ${token1Ticker}`
+  const reserveLabel =
+    tvlUsd !== null && tvlUsd > 0
+      ? `TVL ${formatUsdCompact(tvlUsd)}`
+      : `Reserves ${formatCompact(reserve0, 1)}/${formatCompact(reserve1, 1)}`
 
   return {
     address,
@@ -180,8 +308,9 @@ export function mapPairToPoolView(
     utilizationPct: utilization,
     utilizationLabel: formatPercent(utilization),
     feeLabel: `${(pair.swapFeeBps / 100).toFixed(2)}% fee`,
-    reserveLabel: `R ${formatCompact(reserve0, 1)}/${formatCompact(reserve1, 1)}`,
-    reserveTooltip: `${formatCompact(reserve0)} ${token0Ticker} • ${formatCompact(reserve1)} ${token1Ticker}`,
+    tvlUsd,
+    reserveLabel,
+    reserveTooltip,
     statusLabel: pair.reduceOnly ? 'Reduce-only' : 'Active',
     trend: utilization >= 85 ? 'down' : 'up',
   }

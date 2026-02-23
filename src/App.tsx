@@ -50,6 +50,7 @@ import {
   base64ToBytes,
   computeBorrowHealthSnapshot,
   formatCompact,
+  getIndexerPoolTvlUsdMap,
   getIndexerTokenLogoMap,
   getTokenColor,
   mapPairToPoolView,
@@ -247,16 +248,6 @@ function App() {
   }, [selectedBorrowPool])
 
   const collateralTokenOptions = borrowTokenOptions
-
-  const borrowSelectableTokenOptions = useMemo(() => {
-    const filtered = borrowTokenOptions.filter((token) => token.mint !== collateralToken)
-    return filtered.length ? filtered : borrowTokenOptions
-  }, [borrowTokenOptions, collateralToken])
-
-  const collateralSelectableTokenOptions = useMemo(() => {
-    const filtered = collateralTokenOptions.filter((token) => token.mint !== borrowToken)
-    return filtered.length ? filtered : collateralTokenOptions
-  }, [borrowToken, collateralTokenOptions])
 
   const tradeFromTokenInfo = useMemo(
     () =>
@@ -512,15 +503,28 @@ function App() {
 
       const decoder = getPairDecoder()
       const tokenLogoMap = getIndexerTokenLogoMap(indexerPools)
+      const poolTvlUsdMap = getIndexerPoolTvlUsdMap(indexerPools)
       const decodedPools = accounts
         .map((accountItem) => {
           const encodedData = accountItem.account.data
           const base64Data = Array.isArray(encodedData) ? encodedData[0] : encodedData
           if (typeof base64Data !== 'string') throw new Error('Invalid account data encoding')
           const pair = decoder.decode(base64ToBytes(base64Data)) as Pair
-          return mapPairToPoolView(accountItem.pubkey, pair, tokenLogoMap)
+          return mapPairToPoolView(accountItem.pubkey, pair, tokenLogoMap, poolTvlUsdMap)
         })
-        .sort((a, b) => b.utilizationPct - a.utilizationPct)
+        .sort((a, b) => {
+          const aHasTvl = (a.tvlUsd ?? 0) > 0
+          const bHasTvl = (b.tvlUsd ?? 0) > 0
+          if (aHasTvl !== bHasTvl) {
+            return aHasTvl ? -1 : 1
+          }
+
+          if (aHasTvl && bHasTvl) {
+            return (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0)
+          }
+
+          return b.utilizationPct - a.utilizationPct
+        })
 
       setPoolAccounts(accounts.map(({ pubkey }) => ({ pubkey })))
       setPools(decodedPools)
@@ -817,6 +821,45 @@ function App() {
       return currentToAmount
     })
   }, [tradeToAmount, tradeToToken])
+
+  const setBorrowTokenWithPairing = useCallback(
+    (nextBorrowToken: string) => {
+      setBorrowToken(nextBorrowToken)
+      if (nextBorrowToken === collateralToken) {
+        const alternateToken = borrowTokenOptions.find((token) => token.mint !== nextBorrowToken)?.mint
+        if (alternateToken) {
+          setCollateralToken(alternateToken)
+        }
+      }
+    },
+    [borrowTokenOptions, collateralToken],
+  )
+
+  const setCollateralTokenWithPairing = useCallback(
+    (nextCollateralToken: string) => {
+      setCollateralToken(nextCollateralToken)
+      if (nextCollateralToken === borrowToken) {
+        const alternateToken = collateralTokenOptions.find((token) => token.mint !== nextCollateralToken)?.mint
+        if (alternateToken) {
+          setBorrowToken(alternateToken)
+        }
+      }
+    },
+    [borrowToken, collateralTokenOptions],
+  )
+
+  const switchBorrowDirection = useCallback(() => {
+    if (!borrowTokenOptions.length) return
+    const nextBorrowToken =
+      collateralToken ||
+      borrowTokenOptions.find((token) => token.mint !== borrowToken)?.mint ||
+      borrowToken
+    const nextCollateralToken = borrowToken
+    if (!nextBorrowToken || !nextCollateralToken || nextBorrowToken === nextCollateralToken) return
+
+    setBorrowToken(nextBorrowToken)
+    setCollateralToken(nextCollateralToken)
+  }, [borrowToken, borrowTokenOptions, collateralToken])
 
   const executeTrade = useCallback(async () => {
     setTradeError(null)
@@ -1162,10 +1205,10 @@ function App() {
                 borrowPool={borrowPool}
                 borrowAmount={borrowAmount}
                 borrowToken={borrowToken}
-                borrowTokenOptions={borrowSelectableTokenOptions}
+                borrowTokenOptions={borrowTokenOptions}
                 collateralAmount={collateralAmount}
                 collateralToken={collateralToken}
-                collateralTokenOptions={collateralSelectableTokenOptions}
+                collateralTokenOptions={collateralTokenOptions}
                 selectedBorrowPool={selectedBorrowPool}
                 currentBorrowHealth={currentBorrowHealth}
                 projectedBorrowHealth={projectedBorrowHealth}
@@ -1177,9 +1220,10 @@ function App() {
                 borrowSubmitting={borrowSubmitting}
                 setBorrowPool={setBorrowPool}
                 setBorrowAmount={setBorrowAmount}
-                setBorrowToken={setBorrowToken}
+                setBorrowToken={setBorrowTokenWithPairing}
                 setCollateralAmount={setCollateralAmount}
-                setCollateralToken={setCollateralToken}
+                setCollateralToken={setCollateralTokenWithPairing}
+                switchBorrowDirection={switchBorrowDirection}
                 executeBorrow={executeBorrow}
               />
             )}

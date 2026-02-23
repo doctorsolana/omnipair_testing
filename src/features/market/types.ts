@@ -70,6 +70,7 @@ export type PoolView = {
   utilizationPct: number
   utilizationLabel: string
   feeLabel: string
+  tvlUsd: number | null
   reserveLabel: string
   reserveTooltip: string
   statusLabel: 'Active' | 'Reduce-only'

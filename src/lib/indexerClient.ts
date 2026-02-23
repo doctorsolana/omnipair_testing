@@ -32,11 +32,29 @@ export type IndexerPoolListItem = {
   id?: number
   pair_address?: string
   pairAddress?: string
+  tvl?: unknown
+  tvl_usd?: unknown
+  tvlUsd?: unknown
+  total_tvl?: unknown
+  usd_tvl?: unknown
   token0?: IndexerPoolToken
   token1?: IndexerPoolToken
   reserves?: {
     token0?: string | number
     token1?: string | number
+  }
+  spot_prices?: {
+    token0?: string | number
+    token1?: string | number
+  }
+  oracle_prices?: {
+    token0?: string | number
+    token1?: string | number
+  }
+  metrics?: {
+    tvl?: unknown
+    tvl_usd?: unknown
+    tvlUsd?: unknown
   }
   utilization?: {
     token0?: number
