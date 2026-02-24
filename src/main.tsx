@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AppProvider } from '@solana/connector/react'
 import { getDefaultConfig } from '@solana/connector/headless'
-import './index.css'
-import App from './App.tsx'
-import { getRpcUrl } from './solana/rpcConfig'
+import '@/app/styles/index.css'
+import App from '@/app/App'
+import { getRpcUrl } from '@/integrations/wallet/rpcConfig'
 
 const RPC_URL = getRpcUrl()
 

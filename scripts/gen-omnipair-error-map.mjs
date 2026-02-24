@@ -5,7 +5,7 @@ import path from 'path'
 
 const ROOT = process.cwd()
 const IDL_PATH = path.join(ROOT, 'idl', 'omnipair.json')
-const OUT_PATH = path.join(ROOT, 'src', 'omnipair', 'errors.generated.ts')
+const OUT_PATH = path.join(ROOT, 'src', 'protocol', 'omnipair', 'errors.generated.ts')
 
 function toIdentifier(name) {
   // Keep stable and readable identifiers for export.

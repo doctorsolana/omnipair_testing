@@ -54,6 +54,7 @@ export type PoolView = {
   token1Decimals: number
   rateModel: string
   fixedCfBps: number | null
+  swapFeeBps: number
   price: number
   totalDebt0: bigint
   totalDebt1: bigint

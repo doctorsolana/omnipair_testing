@@ -1,5 +1,5 @@
-import type { IndexerPoolListItem } from '../../lib/indexerClient'
-import type { Pair } from '../../omnipair'
+import type { IndexerPoolListItem } from '@/integrations/indexer/client'
+import type { Pair } from '@/protocol/omnipair'
 import type { BorrowHealthSnapshot, PoolView, TokenInfo } from './types'
 
 const KNOWN_TOKENS: Record<string, TokenInfo> = {
@@ -32,6 +32,10 @@ const STABLE_SYMBOLS = new Set([
   'DAI',
   'USD',
 ])
+
+// Omnipair dynamic max borrow CF is typically ~95% of liquidation CF.
+const MAX_BORROW_CF_FROM_LIQUIDATION_RATIO = 0.95
+export const DEFAULT_DYNAMIC_MAX_BORROW_CF_BPS = 8075
 
 export function shortAddress(value: string) {
   if (value.length < 12) return value
@@ -292,6 +296,7 @@ export function mapPairToPoolView(
     token1Decimals: pair.token1Decimals,
     rateModel: pair.rateModel,
     fixedCfBps: unwrapOption<number>(pair.fixedCfBps),
+    swapFeeBps: pair.swapFeeBps,
     price,
     totalDebt0: pair.totalDebt0,
     totalDebt1: pair.totalDebt1,
@@ -319,6 +324,26 @@ export function mapPairToPoolView(
 export function toPercentLabel(value: number | null, maximumFractionDigits = 2) {
   if (value === null || !Number.isFinite(value)) return '--'
   return `${(value * 100).toFixed(maximumFractionDigits)}%`
+}
+
+export function estimateMaxBorrowCfBps(params: {
+  liquidationCfBps?: number | null
+  fixedCfBps?: number | null
+}) {
+  const { liquidationCfBps, fixedCfBps } = params
+
+  if (typeof liquidationCfBps === 'number' && Number.isFinite(liquidationCfBps) && liquidationCfBps > 0) {
+    return Math.max(
+      0,
+      Math.min(10_000, Math.floor(liquidationCfBps * MAX_BORROW_CF_FROM_LIQUIDATION_RATIO)),
+    )
+  }
+
+  if (typeof fixedCfBps === 'number' && Number.isFinite(fixedCfBps) && fixedCfBps > 0) {
+    return Math.max(0, Math.min(10_000, Math.floor(fixedCfBps)))
+  }
+
+  return DEFAULT_DYNAMIC_MAX_BORROW_CF_BPS
 }
 
 function clampNonNegative(value: number) {

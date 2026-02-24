@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "indexer:probe": "node scripts/indexer-probe.mjs",
+    "leverage:sim": "tsx scripts/leverage-sim.ts",
+    "loop:feasibility": "node scripts/loop-feasibility.mjs",
     "idl:fetch": "anchor idl fetch --provider.cluster mainnet -o idl/omnipair.json omnixgS8fnqHfCcTGKWj6JtKjzpJZ1Y5y9pyFkQDkYE",
     "codama:gen": "codama run --all",
     "errors:gen": "node scripts/gen-omnipair-error-map.mjs",
@@ -37,6 +39,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"

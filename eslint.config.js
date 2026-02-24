@@ -20,4 +20,21 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/protocol/omnipair/generated/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-empty-object-type': 'off',
+    },
+  },
+  {
+    files: [
+      'src/pages/MarketsPage.tsx',
+      'src/pages/PoolDetailPage.tsx',
+      'src/integrations/wallet/useSendSmartTransaction.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ])
